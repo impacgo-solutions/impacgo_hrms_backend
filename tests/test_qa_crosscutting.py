@@ -307,7 +307,13 @@ class ConfigTests(unittest.TestCase):
 
     def test_l38_dev_default_allow_list(self):
         s = app.config.settings
+        from app.tenant_email import store
+        store.invalidate()
+        # the dev default is the sender's domain; here the sender comes from the legacy global
+        # transport, which a tenant may use only through the explicit fallback opt-in
         with mock.patch.object(s, "app_env", "dev"), mock.patch.object(s, "email_allowed_domains", ""), \
+                mock.patch.object(s, "email_global_fallback_tenants", "*"), \
+                mock.patch.object(s, "smtp_host", "smtp.example.com"), \
                 mock.patch.object(s, "email_from_address", "info@impacgo.com"):
             self.assertEqual(email_service.allowed_domains(), {"impacgo.com"})
             self.assertFalse(email_service.is_allowed_recipient("someone@gmail.com"))

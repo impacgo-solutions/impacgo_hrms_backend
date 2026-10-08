@@ -86,18 +86,48 @@ class MailMessage:
 
 # ── configuration ───────────────────────────────────────────────────────────
 
-def is_configured() -> bool:
-    return settings.microsoft_graph_configured
+@dataclass(frozen=True)
+class GraphConfig:
+    """One Microsoft Graph mailbox configuration. Per-tenant configs are built
+    from public.tenant_email_settings (secret already decrypted, held in
+    memory only); global_config() is the legacy MICROSOFT_* .env fallback.
+    repr() hides the secret."""
+    tenant_id: str = ""
+    client_id: str = ""
+    client_secret: str = field(default="", repr=False)
+    from_email: str = ""
+    on_behalf: str = ""
+    on_behalf_name: str = ""
+
+    @property
+    def missing(self) -> list[str]:
+        return [n for n, v in (("tenant_id", self.tenant_id), ("client_id", self.client_id),
+                               ("client_secret", self.client_secret), ("from_email", self.from_email))
+                if not (v or "").strip()]
 
 
-def sender_address() -> str:
-    return settings.microsoft_from_email.strip()
+def global_config() -> GraphConfig:
+    return GraphConfig(
+        tenant_id=settings.microsoft_tenant_id, client_id=settings.microsoft_client_id,
+        client_secret=settings.microsoft_client_secret, from_email=settings.microsoft_from_email,
+        on_behalf=settings.microsoft_on_behalf_of or "",
+        on_behalf_name=settings.microsoft_on_behalf_of_name or "",
+    )
 
 
-def on_behalf_address() -> str:
-    """The MICROSOFT_ON_BEHALF_OF address, or "" when off / same as the sender."""
-    address = (settings.microsoft_on_behalf_of or "").strip()
-    return address if address and address.lower() != sender_address().lower() else ""
+def is_configured(cfg: GraphConfig | None = None) -> bool:
+    return not (cfg or global_config()).missing
+
+
+def sender_address(cfg: GraphConfig | None = None) -> str:
+    return (cfg or global_config()).from_email.strip()
+
+
+def on_behalf_address(cfg: GraphConfig | None = None) -> str:
+    """The on-behalf-of address, or "" when off / same as the sender."""
+    cfg = cfg or global_config()
+    address = (cfg.on_behalf or "").strip()
+    return address if address and address.lower() != sender_address(cfg).lower() else ""
 
 
 # ── HTTP (keep-alive connection per thread + host) ──────────────────────────
@@ -151,21 +181,18 @@ def _request(host: str, method: str, path: str, body: bytes, headers: dict[str, 
 # ── token (client credentials, cached in memory) ────────────────────────────
 
 _token_lock = threading.Lock()
-_token: dict[str, object] = {"value": None, "expires_at": 0.0, "key": None}
+# One cached token per (Entra tenant, client, secret): HRMS tenants never share
+# a token, and rotating a secret naturally invalidates the old entry.
+_tokens: dict[tuple[str, str, int], dict[str, object]] = {}
 
 
-def _config_key() -> tuple[str, str, str]:
-    # Rotating the secret / changing the app invalidates the cached token.
-    return (
-        settings.microsoft_tenant_id.strip(),
-        settings.microsoft_client_id.strip(),
-        str(hash(settings.microsoft_client_secret)),
-    )
+def _config_key(cfg: GraphConfig) -> tuple[str, str, int]:
+    return (cfg.tenant_id.strip(), cfg.client_id.strip(), hash(cfg.client_secret))
 
 
-def invalidate_token() -> None:
+def invalidate_token(cfg: GraphConfig | None = None) -> None:
     with _token_lock:
-        _token.update(value=None, expires_at=0.0, key=None)
+        _tokens.pop(_config_key(cfg or global_config()), None)
 
 
 def _aad_error(status: int, data: bytes) -> GraphMailError:
@@ -199,12 +226,12 @@ def _aad_error(status: int, data: bytes) -> GraphMailError:
     return GraphMailError("auth_failed", f"Microsoft Entra ID authentication failed ({aadsts or error or status}).", status=status)
 
 
-def _fetch_token() -> tuple[str, float]:
-    tenant = urllib.parse.quote(settings.microsoft_tenant_id.strip(), safe="")
+def _fetch_token(cfg: GraphConfig) -> tuple[str, float]:
+    tenant = urllib.parse.quote(cfg.tenant_id.strip(), safe="")
     form = urllib.parse.urlencode({
         "grant_type": "client_credentials",
-        "client_id": settings.microsoft_client_id.strip(),
-        "client_secret": settings.microsoft_client_secret,
+        "client_id": cfg.client_id.strip(),
+        "client_secret": cfg.client_secret,
         "scope": _SCOPE,
     }).encode()
     status, _headers, data = _request(
@@ -220,36 +247,38 @@ def _fetch_token() -> tuple[str, float]:
     return str(token), time.time() + float(payload.get("expires_in") or 3599)
 
 
-def get_access_token(force_refresh: bool = False) -> str:
+def get_access_token(force_refresh: bool = False, cfg: GraphConfig | None = None) -> str:
     """App-only Graph token, reused until 5 minutes before it expires."""
-    if not is_configured():
+    cfg = cfg or global_config()
+    if not is_configured(cfg):
         raise GraphMailError("not_configured", "Microsoft Graph email configuration is incomplete.")
-    key = _config_key()
+    key = _config_key(cfg)
     with _token_lock:
+        cached = _tokens.get(key)
         if (
             not force_refresh
-            and _token["value"]
-            and _token["key"] == key
-            and float(_token["expires_at"]) - _REFRESH_MARGIN_SECONDS > time.time()
+            and cached
+            and float(cached["expires_at"]) - _REFRESH_MARGIN_SECONDS > time.time()
         ):
-            return str(_token["value"])
-        value, expires_at = _with_retries(_fetch_token, what="token")
-        _token.update(value=value, expires_at=expires_at, key=key)
+            return str(cached["value"])
+        value, expires_at = _with_retries(lambda: _fetch_token(cfg), what="token")
+        _tokens[key] = {"value": value, "expires_at": expires_at}
         return value
 
 
-def diagnose() -> dict:
+def diagnose(cfg: GraphConfig | None = None) -> dict:
     """Admin diagnostics without sending anything: can the app get a token,
     and does that token carry the Mail.Send APPLICATION permission? Returns
     only non-secret facts (never the token)."""
-    out: dict = {"configured": is_configured(), "sender": sender_address() or None,
-                 "on_behalf_of": on_behalf_address() or None,
+    cfg = cfg or global_config()
+    out: dict = {"configured": is_configured(cfg), "sender": sender_address(cfg) or None,
+                 "on_behalf_of": on_behalf_address(cfg) or None,
                  "token_ok": False, "roles": [], "mail_send_granted": False, "error": None}
-    if not is_configured():
+    if not is_configured(cfg):
         out["error"] = "Microsoft Graph email configuration is incomplete."
         return out
     try:
-        token = get_access_token(force_refresh=True)
+        token = get_access_token(force_refresh=True, cfg=cfg)
     except GraphMailError as exc:
         out["error"] = str(exc)
         out["error_code"] = exc.code
@@ -262,7 +291,7 @@ def diagnose() -> dict:
         claims = {}
     out["roles"] = sorted(claims.get("roles") or [])
     out["mail_send_granted"] = "Mail.Send" in out["roles"]
-    out["tenant_matches"] = claims.get("tid") == settings.microsoft_tenant_id.strip()
+    out["tenant_matches"] = claims.get("tid") == cfg.tenant_id.strip()
     if not out["mail_send_granted"]:
         out["error"] = (
             "The token has no Mail.Send application permission. In Microsoft Entra admin center > App "
@@ -302,13 +331,14 @@ def _recipients(addresses: list[str]) -> list[dict]:
     return [{"emailAddress": {"address": a}} for a in addresses if a]
 
 
-def build_payload(message: MailMessage, *, on_behalf: bool = True) -> dict:
+def build_payload(message: MailMessage, *, on_behalf: bool = True, cfg: GraphConfig | None = None) -> dict:
     """The Graph sendMail JSON body (exposed for tests). With
     MICROSOFT_ON_BEHALF_OF set (and [on_behalf]): From = that address,
     Sender = the MICROSOFT_FROM_EMAIL mailbox -- "sent on behalf of"; replies
     go to the on-behalf address unless the message sets its own Reply-To.
     Without it (or on the fallback after Exchange denied Send on Behalf),
     From = the mailbox and Reply-To falls back to the on-behalf address."""
+    cfg = cfg or global_config()
     if message.html_body is not None:
         body = {"contentType": "HTML", "content": message.html_body}
     else:
@@ -322,16 +352,16 @@ def build_payload(message: MailMessage, *, on_behalf: bool = True) -> dict:
         msg["ccRecipients"] = _recipients(message.cc)
     if message.bcc:
         msg["bccRecipients"] = _recipients(message.bcc)
-    behalf = on_behalf_address()
+    behalf = on_behalf_address(cfg)
     reply_to = message.reply_to or ([behalf] if behalf else [])
     if reply_to:
         msg["replyTo"] = _recipients(reply_to)
     if behalf and on_behalf:
-        display = (settings.microsoft_on_behalf_of_name or "").strip()
+        display = (cfg.on_behalf_name or "").strip()
         msg["from"] = {"emailAddress": {"address": behalf, **({"name": display} if display else {})}}
-        msg["sender"] = {"emailAddress": {"address": sender_address()}}
+        msg["sender"] = {"emailAddress": {"address": sender_address(cfg)}}
     elif message.from_name:
-        msg["from"] = {"emailAddress": {"address": sender_address(), "name": message.from_name}}
+        msg["from"] = {"emailAddress": {"address": sender_address(cfg), "name": message.from_name}}
     if message.attachments:
         msg["attachments"] = [
             {
@@ -391,31 +421,32 @@ def _graph_error(status: int, headers: dict[str, str], data: bytes) -> GraphMail
     return GraphMailError("graph_error", f"Microsoft Graph returned {status} {code}".strip(), status=status)
 
 
-def send_mail(message: MailMessage) -> int:
+def send_mail(message: MailMessage, cfg: GraphConfig | None = None) -> int:
     """Sends [message] from MICROSOFT_FROM_EMAIL. Returns Graph's HTTP status
     (202 = accepted). Raises GraphMailError."""
     if not message.to:
         raise GraphMailError("invalid_recipient", "At least one recipient is required.")
+    cfg = cfg or global_config()
     try:
-        return _send(message, on_behalf=True)
+        return _send(message, on_behalf=True, cfg=cfg)
     except GraphMailError as exc:
-        if exc.code != "send_on_behalf_denied" or not on_behalf_address():
+        if exc.code != "send_on_behalf_denied" or not on_behalf_address(cfg):
             raise
         # Never lose the email over a missing Exchange right: send it from the
         # mailbox itself (Reply-To still the on-behalf address) and say why.
         logger.warning("Send on behalf of %s was denied by Exchange; sent from %s instead. %s",
-                       on_behalf_address(), sender_address(), exc)
-        return _send(message, on_behalf=False)
+                       on_behalf_address(cfg), sender_address(cfg), exc)
+        return _send(message, on_behalf=False, cfg=cfg)
 
 
-def _send(message: MailMessage, *, on_behalf: bool) -> int:
-    body = json.dumps(build_payload(message, on_behalf=on_behalf)).encode("utf-8")
-    path = f"/v1.0/users/{urllib.parse.quote(sender_address(), safe='@.')}/sendMail"
+def _send(message: MailMessage, *, on_behalf: bool, cfg: GraphConfig) -> int:
+    body = json.dumps(build_payload(message, on_behalf=on_behalf, cfg=cfg)).encode("utf-8")
+    path = f"/v1.0/users/{urllib.parse.quote(sender_address(cfg), safe='@.')}/sendMail"
     refreshed = False
 
     def attempt() -> int:
         nonlocal refreshed
-        token = get_access_token()
+        token = get_access_token(cfg=cfg)
         status, headers, data = _request(
             _GRAPH_HOST, "POST", path, body,
             {"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
@@ -428,7 +459,7 @@ def _send(message: MailMessage, *, on_behalf: bool) -> int:
             # granted (a token's permissions are fixed when it is issued):
             # fetch a new one and try again once.
             refreshed = True
-            invalidate_token()
+            invalidate_token(cfg)
             err.transient = True
         raise err
 

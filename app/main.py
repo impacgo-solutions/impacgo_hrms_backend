@@ -39,6 +39,7 @@ from .routers import (
     designations,
     documents,
     email as email_router,
+    email_settings as email_settings_router,
     email_templates,
     employees,
     employee_permissions as employee_permissions_router,
@@ -381,6 +382,7 @@ app.include_router(super_admin.router)
 app.include_router(custom_modules.router)
 app.include_router(module_access.router)
 app.include_router(email_router.router)
+app.include_router(email_settings_router.router)
 app.include_router(email_templates.router)
 app.include_router(exit_letters.router)
 app.include_router(fnf.router)

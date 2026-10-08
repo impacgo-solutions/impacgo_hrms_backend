@@ -109,6 +109,18 @@ class Settings(BaseSettings):
     reminder_send_hour: int = 9
     reminder_holiday_days_before: int = 1
     reminder_poll_minutes: int = 15
+    # Per-tenant email (public.tenant_email_settings, app/tenant_email/).
+    # Master key encrypting every tenant's SMTP password / Graph client secret /
+    # API key at rest: one or more Fernet keys, comma-separated (first
+    # encrypts, all decrypt -- rotation). Generate:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Without it secrets can neither be stored nor read (never plaintext).
+    tenant_email_encryption_key: str = ""
+    # Tenants (slugs, comma-separated, or "*") that may fall back to the global
+    # SMTP_* / MICROSOFT_* settings above when they have no row in
+    # tenant_email_settings. Empty (default) = NO fallback: an unconfigured
+    # tenant sends no email rather than borrowing another company's mailbox.
+    email_global_fallback_tenants: str = ""
     # Optional Reply-To for HRMS emails (e.g. hr@impacgo.com); blank = none.
     email_reply_to: str = ""
     # Extra recipients (comma-separated) for new leave applications, in
@@ -269,6 +281,17 @@ class Settings(BaseSettings):
         """Startup check for Microsoft Graph email: logs which variables are
         missing (names only). Never raises -- email is best-effort and the
         rest of the HRMS must keep working without it."""
+        if not (self.tenant_email_encryption_key or "").strip():
+            _logger.error(
+                "TENANT_EMAIL_ENCRYPTION_KEY is not set: per-tenant email settings cannot be saved or "
+                "decrypted (secrets are never stored in plaintext). Generate a key: python -c \"from "
+                "cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
+        if not (self.email_global_fallback_tenants or "").strip():
+            # Tenants send only with their own public.tenant_email_settings row; the
+            # global SMTP_* / MICROSOFT_* variables below are not used at all.
+            _logger.info("Email: per-tenant settings only (EMAIL_GLOBAL_FALLBACK_TENANTS is empty).")
+            return
         missing = self.microsoft_graph_missing
         if not missing:
             _logger.info(

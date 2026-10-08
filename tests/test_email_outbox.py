@@ -46,7 +46,7 @@ class OutboxTests(unittest.TestCase):
         mock.patch.object(es, "_open_session", lambda slug: self.db).start()
         mock.patch.object(self.db, "close", lambda: None).start()
         mock.patch.object(settings, "email_allowed_domains", "*").start()  # any domain (L-38: blank = dev default)
-        mock.patch.object(es, "transport", lambda: "graph").start()
+        mock.patch.object(es, "transport", lambda slug=None: "graph").start()
         self.submitted = []
         mock.patch.object(es._executor, "submit",
                           side_effect=lambda fn, *a: self.submitted.append((fn, a))).start()

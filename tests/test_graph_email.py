@@ -49,17 +49,23 @@ def _graph(status, code="", headers=None):
 
 # The tests use example.com addresses and a plain sender, whatever the local
 # .env says (EMAIL_ALLOWED_DOMAINS / MICROSOFT_ON_BEHALF_OF have own tests).
-_ENV_OVERRIDES = {"email_allowed_domains": "*", "microsoft_on_behalf_of": "", "microsoft_on_behalf_of_name": ""}
+_ENV_OVERRIDES = {"email_allowed_domains": "*", "email_global_fallback_tenants": "*", "microsoft_on_behalf_of": "", "microsoft_on_behalf_of_name": ""}
 _ENV_SAVED: dict = {}
 
 
 def setUpModule():
+    from app.tenant_email import store  # settings are patched per test: never serve a cached config
+    _ENV_SAVED["_ttl"] = store.CONFIG_TTL_SECONDS
+    store.CONFIG_TTL_SECONDS = 0
+    store.invalidate()
     for key, value in _ENV_OVERRIDES.items():
         _ENV_SAVED[key] = getattr(settings, key)
         setattr(settings, key, value)
 
 
 def tearDownModule():
+    from app.tenant_email import store
+    store.CONFIG_TTL_SECONDS = _ENV_SAVED.pop("_ttl", 30)
     for key, value in _ENV_SAVED.items():
         setattr(settings, key, value)
 

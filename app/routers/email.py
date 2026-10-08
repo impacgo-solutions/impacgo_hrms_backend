@@ -71,7 +71,7 @@ def _result(result: email_service.SendResult) -> dict:
     if result.status == "SKIPPED":
         raise HTTPException(
             status_code=503,
-            detail={"message": "Email is not configured on the server (Microsoft Graph settings are missing).",
+            detail={"message": "Email is not configured for this organisation (Admin > Email Settings).",
                     "code": "not_configured", "log_id": str(result.log_id) if result.log_id else None},
         )
     return {"status": result.status, "log_id": str(result.log_id) if result.log_id else None,
@@ -86,14 +86,25 @@ def _email_error(exc: email_service.EmailError) -> HTTPException:
 # ── admin ──────────────────────────────────────────────────────────────────
 
 @router.get("/admin/email/status")
-def email_status(current_user: models.User = Depends(require_permission("system_settings_rbac"))) -> dict:
-    return email_service.status()
+def email_status(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("system_settings_rbac")),
+) -> dict:
+    return email_service.status(database.get_session_tenant_slug(db))
 
 
 @router.get("/admin/email/diagnostics")
-def email_diagnostics(current_user: models.User = Depends(require_permission("system_settings_rbac"))) -> dict:
-    from .. import graph_mail
-    return graph_mail.diagnose()
+def email_diagnostics(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("system_settings_rbac")),
+) -> dict:
+    """Token + Mail.Send check for THIS tenant's Microsoft Graph configuration (sends nothing)."""
+    from .. import graph_mail, tenant_email
+    from ..tenant_email.providers.microsoft_graph import graph_config
+    cfg = tenant_email.load_config(database.get_session_tenant_slug(db))
+    if cfg is None or cfg.provider != "microsoft_graph":
+        return {"configured": False, "error": "This organisation does not use Microsoft Graph email."}
+    return graph_mail.diagnose(graph_config(cfg))
 
 
 class TestEmailIn(BaseModel):

@@ -55,10 +55,11 @@ from sqlalchemy import and_, event, or_, select, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, undefer
 
-from . import database, graph_mail, models
+from . import database, graph_mail, models, tenant_email
 from . import template_rendering as tr
 from .config import settings
 from .graph_mail import Attachment, GraphMailError, MailMessage
+from .tenant_email import EmailSendError
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +186,14 @@ class EmailJob:
     # register_attachment_recipe) so the outbox can rebuild the attachment
     # after a restart.
     attachment_recipe: dict | None = None
+    # Tenant (slug) whose public.tenant_email_settings send this email. Always
+    # taken from the authenticated session / the outbox's own tenant schema --
+    # never from a request body. Stamped by queue_email / send_now / _worker.
+    tenant_slug: str | None = None
+
+
+def _session_slug(db: Session | None) -> str | None:
+    return (database.get_session_tenant_slug(db) if db is not None else None) or database.get_tenant_slug()
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -218,34 +227,28 @@ def parse_address_list(value: str | list[str] | None) -> list[str]:
     return list(seen)
 
 
-def transport() -> str | None:
-    """'graph', 'smtp' or None (email disabled / not configured)."""
-    if not settings.email_enabled:
-        return None
-    if graph_mail.is_configured():
-        return "graph"
-    if settings.smtp_host and settings.email_from_address:
-        return "smtp"
-    return None
+def transport(tenant_slug: str | None = None) -> str | None:
+    """The tenant's provider label ('smtp', 'graph', 'sendgrid', 'ses') or
+    None (email disabled / this tenant has no usable configuration)."""
+    cfg = tenant_email.load_config(tenant_slug)
+    return cfg.transport_label if cfg else None
 
 
-def sender_address() -> str:
-    t = transport()
-    if t == "graph":
-        return graph_mail.sender_address()
-    return settings.email_from_address or graph_mail.sender_address() or ""
+def sender_address(tenant_slug: str | None = None) -> str:
+    cfg = tenant_email.load_config(tenant_slug)
+    return cfg.from_email if cfg else ""
 
 
-def status() -> dict:
-    """Admin-visible configuration status -- variable NAMES only, never values."""
+def status(tenant_slug: str | None = None) -> dict:
+    """Admin-visible configuration status for ONE tenant -- never secrets."""
+    cfg = tenant_email.load_config(tenant_slug)
     return {
         "enabled": bool(settings.email_enabled),
-        "transport": transport(),
-        "graph_configured": graph_mail.is_configured(),
-        "missing": settings.microsoft_graph_missing,
-        "sender": sender_address() or None,
-        "on_behalf_of": graph_mail.on_behalf_address() or None,
-        "allowed_domains": sorted(allowed_domains()),
+        "transport": cfg.transport_label if cfg else None,
+        "provider": cfg.provider if cfg else None,
+        "config_source": cfg.source if cfg else None,
+        "sender": (cfg.from_email if cfg else "") or None,
+        "allowed_domains": sorted(allowed_domains(tenant_slug)),
         "reminders_enabled": bool(settings.reminders_enabled),
         "max_attachment_bytes": settings.email_max_attachment_bytes,
     }
@@ -446,74 +449,32 @@ def _check_attachment_size(attachments: list[Attachment]) -> None:
 
 # ── delivery ───────────────────────────────────────────────────────────────
 
-def _send_smtp(job: EmailJob) -> int:
-    """Legacy SMTP transport (only while Graph is not configured)."""
-    message = EmailMessage()
-    message["Subject"] = job.subject
-    display = f"{job.from_name} via {settings.email_from_name}" if job.from_name else settings.email_from_name
-    message["From"] = formataddr((display, settings.email_from_address))
-    message["To"] = ", ".join(job.to)
-    if job.cc:
-        message["Cc"] = ", ".join(job.cc)
-    if job.reply_to:
-        message["Reply-To"] = ", ".join(job.reply_to)
-    message.set_content(job.text_body or "This email requires an HTML-capable client.")
-    if job.html_body is not None:
-        message.add_alternative(job.html_body, subtype="html")
-    for a in job.attachments:
-        maintype, _, subtype = a.content_type.partition("/")
-        message.add_attachment(a.content, maintype=maintype, subtype=subtype or "octet-stream", filename=a.name)
-    recipients = job.to + job.cc + job.bcc
-    if settings.smtp_use_ssl:
-        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, context=ssl.create_default_context(), timeout=15) as server:
-            if settings.smtp_username:
-                server.login(settings.smtp_username, settings.smtp_password)
-            server.send_message(message, to_addrs=recipients)
-    else:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
-            if settings.smtp_use_tls:
-                server.starttls(context=ssl.create_default_context())
-            if settings.smtp_username:
-                server.login(settings.smtp_username, settings.smtp_password)
-            server.send_message(message, to_addrs=recipients)
-    return 250
-
-
 def _deliver(job: EmailJob) -> tuple[str, int | None, str | None, str | None, str | None]:
-    """Sends [job] now. Returns (status, provider_status, error_code,
-    error_message, transport). Never raises."""
-    t = transport()
-    if t is None:
-        return "SKIPPED", None, "not_configured", "Email is not configured.", None
+    """Sends [job] now with job.tenant_slug's own provider configuration.
+    Returns (status, provider_status, error_code, error_message, transport).
+    Never raises."""
+    slug = job.tenant_slug
+    cfg = tenant_email.load_config(slug)
+    if cfg is None:
+        return "SKIPPED", None, "not_configured", "Email is not configured for this organisation.", None
+    message = MailMessage(
+        to=job.to, cc=job.cc, bcc=job.bcc, reply_to=job.reply_to,
+        subject=job.subject, html_body=job.html_body, text_body=job.text_body,
+        attachments=job.attachments, from_name=job.from_name,
+    )
     try:
-        if t == "graph":
-            code = graph_mail.send_mail(MailMessage(
-                to=job.to, cc=job.cc, bcc=job.bcc, reply_to=job.reply_to,
-                subject=job.subject, html_body=job.html_body, text_body=job.text_body,
-                attachments=job.attachments, from_name=job.from_name,
-            ))
-        else:
-            code = _send_smtp(job)
+        code, _cfg = tenant_email.send(slug, message, message_type=job.email_type)
         logger.info(
-            "Email sent: type=%s to=%s subject=%r via=%s status=%s entity=%s:%s",
-            job.email_type, ",".join(job.to), job.subject, t, code,
+            "Email sent: tenant=%s type=%s recipients=%d via=%s status=%s entity=%s:%s",
+            slug, job.email_type, len(job.to), cfg.provider, code,
             job.related_entity_type, job.related_entity_id,
         )
-        return "SENT", code, None, None, t
-    except GraphMailError as exc:
-        logger.error(
-            "Email failed: type=%s to=%s subject=%r via=graph code=%s status=%s entity=%s:%s -- %s",
-            job.email_type, ",".join(job.to), job.subject, exc.code, exc.status,
-            job.related_entity_type, job.related_entity_id, exc,
-        )
-        return "FAILED", exc.status, exc.code, str(exc), t
-    except Exception as exc:  # SMTP / unexpected -- never log credentials
-        logger.error(
-            "Email failed: type=%s to=%s subject=%r via=%s error=%s entity=%s:%s",
-            job.email_type, ",".join(job.to), job.subject, t, type(exc).__name__,
-            job.related_entity_type, job.related_entity_id,
-        )
-        return "FAILED", None, "send_failed", f"{type(exc).__name__}: sending failed.", t
+        return "SENT", code, None, None, cfg.transport_label
+    except EmailSendError as exc:
+        return "FAILED", exc.status, exc.code, str(exc), cfg.transport_label
+    except Exception as exc:  # never log credentials
+        logger.error("Email failed: tenant=%s type=%s via=%s error=%s", slug, job.email_type, cfg.provider, type(exc).__name__)
+        return "FAILED", None, "send_failed", f"{type(exc).__name__}: sending failed.", cfg.transport_label
 
 
 # ── durable outbox ─────────────────────────────────────────────────────────
@@ -670,6 +631,7 @@ def _update_log(tenant_slug: str | None, log_id: uuid.UUID, result) -> None:
 
 
 def _worker(job: EmailJob, log_id: uuid.UUID | None, tenant_slug: str | None) -> None:
+    job.tenant_slug = tenant_slug or job.tenant_slug
     if log_id is not None and not _claim(tenant_slug, log_id):
         return
     if job.attachments_factory is None and job.attachment_recipe:
@@ -741,14 +703,14 @@ def _outbox_loop() -> None:
     delay = 10  # first pass shortly after startup: recovers what a restart dropped
     while not _outbox_stop.wait(delay):
         delay = max(15, int(settings.email_outbox_poll_seconds))
-        if transport() is None:
-            continue
         try:
             slugs = reminders.active_tenant_slugs()
         except Exception:
             logger.exception("Email outbox: could not list tenants")
             continue
         for slug in slugs:
+            if transport(slug) is None:
+                continue  # this tenant has no email configured: nothing to dispatch
             try:
                 process_outbox(slug)
             except Exception:
@@ -787,7 +749,7 @@ def _new_log(job: EmailJob, status_: str) -> models.EmailLog:
         id=uuid.uuid4(),
         company_id=job.company_id,
         email_type=job.email_type,
-        sender=sender_address() or None,
+        sender=sender_address(job.tenant_slug) or None,
         recipient=", ".join(job.to),
         cc=", ".join(job.cc) or None,
         bcc=", ".join(job.bcc) or None,
@@ -796,7 +758,7 @@ def _new_log(job: EmailJob, status_: str) -> models.EmailLog:
         related_entity_type=job.related_entity_type,
         related_entity_id=job.related_entity_id,
         status=status_,
-        transport=transport(),
+        transport=transport(job.tenant_slug),
         attempts=0,
         idempotency_key=job.idempotency_key,
         created_by=job.created_by,
@@ -805,12 +767,12 @@ def _new_log(job: EmailJob, status_: str) -> models.EmailLog:
     )
 
 
-def allowed_domains() -> set[str]:
+def allowed_domains(tenant_slug: str | None = None) -> set[str]:
     """EMAIL_ALLOWED_DOMAINS as a set; empty = every domain allowed.
 
     L-38: "*" means any domain explicitly. Left blank in a dev environment
     (APP_ENV dev/local/test -- the shared dev DB is full of demo and real
-    employee addresses), the default is the sender mailbox's own domain, so
+    employee addresses), the default is the tenant's sender mailbox domain, so
     a dev server never mails outside the organisation by accident. Blank in
     a real deployment (APP_ENV=production etc.) = any domain."""
     raw = (settings.email_allowed_domains or "").strip()
@@ -819,37 +781,41 @@ def allowed_domains() -> set[str]:
     domains = {d.strip().lower().lstrip("@") for d in raw.split(",") if d.strip() and d.strip() != "*"}
     if domains or not settings.is_dev:
         return domains
-    return dev_default_allowed_domains()
+    return dev_default_allowed_domains(tenant_slug)
 
 
-def dev_default_allowed_domains() -> set[str]:
-    """The sender's domain; nothing configured -> a domain nobody has
+def dev_default_allowed_domains(tenant_slug: str | None = None) -> set[str]:
+    """The tenant sender's domain; nothing configured -> a domain nobody has
     (every send skipped) rather than "anyone"."""
-    sender = (settings.email_from_address or settings.microsoft_from_email or "").strip()
+    sender = sender_address(tenant_slug).strip()
     if "@" in sender:
         return {sender.rsplit("@", 1)[-1].lower()}
     return {"invalid.invalid"}
 
 
-def is_allowed_recipient(address: str) -> bool:
+def is_allowed_recipient(address: str, tenant_slug: str | None = None) -> bool:
     """EMAIL_ALLOWED_DOMAINS: True when unset, else only those domains."""
-    domains = allowed_domains()
+    domains = allowed_domains(tenant_slug)
     return not domains or address.rsplit("@", 1)[-1].lower() in domains
 
 
 def _clean(job: EmailJob) -> EmailJob:
+    domains = allowed_domains(job.tenant_slug)
+
+    def allowed(a):
+        return not domains or a.rsplit("@", 1)[-1].lower() in domains
+
     def keep(addresses):
         valid = [a for a in parse_address_list(addresses) if is_valid_email(a)]
-        job.blocked.extend(a for a in valid if not is_allowed_recipient(a))
-        return [a for a in valid if is_allowed_recipient(a)]
+        job.blocked.extend(a for a in valid if not allowed(a))
+        return [a for a in valid if allowed(a)]
 
     job.to = keep(job.to)
     job.cc = [a for a in keep(job.cc) if a.lower() not in {t.lower() for t in job.to}]
     job.bcc = keep(job.bcc)
     if job.blocked:
         logger.info("Email %s: not sent to %d recipient(s) outside EMAIL_ALLOWED_DOMAINS", job.email_type, len(job.blocked))
-    if not job.reply_to and settings.email_reply_to and is_valid_email(settings.email_reply_to):
-        job.reply_to = [settings.email_reply_to.strip()]
+    # Reply-To default comes from the tenant's own settings (the providers apply it).
     return job
 
 
@@ -859,6 +825,7 @@ def queue_email(db: Session | None, job: EmailJob) -> models.EmailLog | None:
     dropped; with none left nothing is queued. Never raises into the
     caller's business logic."""
     try:
+        job.tenant_slug = job.tenant_slug or _session_slug(db)
         job = _clean(job)
         if not job.to:
             if job.blocked and db is not None:
@@ -873,9 +840,9 @@ def queue_email(db: Session | None, job: EmailJob) -> models.EmailLog | None:
                     logger.warning("Email log unavailable for skipped %s", job.email_type)
             return None
         if db is None:
-            _executor.submit(_worker, job, None, None)
+            _executor.submit(_worker, job, None, job.tenant_slug)
             return None
-        status_ = "QUEUED" if transport() else "SKIPPED"
+        status_ = "QUEUED" if transport(job.tenant_slug) else "SKIPPED"
         log: models.EmailLog | None = _new_log(job, status_)
         if status_ == "QUEUED":
             # Durable outbox: the email travels with its row until delivered.
@@ -904,7 +871,7 @@ def queue_email(db: Session | None, job: EmailJob) -> models.EmailLog | None:
             logger.debug("Email not sent (not configured): type=%s to=%s", job.email_type, ",".join(job.to))
             return log
         db.info.setdefault(_PENDING_KEY, []).append(
-            (job, log.id if log is not None else None, database.get_session_tenant_slug(db))
+            (job, log.id if log is not None else None, job.tenant_slug)
         )
         return log
     except Exception:
@@ -926,21 +893,22 @@ def send_now(db: Session, job: EmailJob) -> SendResult:
     validates, records the log row, sends synchronously and records the
     outcome, so the caller can show the real result. Raises EmailError for
     invalid input; delivery failures are returned, not raised. Commits [db]."""
+    job.tenant_slug = _session_slug(db)  # always the authenticated tenant
     requested = parse_address_list(job.to)
     bad = [a for a in requested + parse_address_list(job.cc) + parse_address_list(job.bcc) if not is_valid_email(a)]
     if bad:
         raise EmailError(f"Invalid email address: {bad[0]}", code="invalid_recipient")
-    outside = [a for a in requested + parse_address_list(job.cc) + parse_address_list(job.bcc) if not is_allowed_recipient(a)]
+    outside = [a for a in requested + parse_address_list(job.cc) + parse_address_list(job.bcc) if not is_allowed_recipient(a, job.tenant_slug)]
     if outside:
         raise EmailError(
             f"Email to {outside[0]} is disabled in this environment (allowed domains: "
-            f"{', '.join(sorted(allowed_domains()))}).", code="domain_not_allowed",
+            f"{', '.join(sorted(allowed_domains(job.tenant_slug)))}).", code="domain_not_allowed",
         )
     job = _clean(job)
     if not job.to:
         raise EmailError("A valid recipient email address is required.", code="invalid_recipient")
     _check_attachment_size(job.attachments)
-    log = _new_log(job, "QUEUED" if transport() else "SKIPPED")
+    log = _new_log(job, "QUEUED" if transport(job.tenant_slug) else "SKIPPED")
     log_saved = True
     try:
         with db.begin_nested():
@@ -1444,11 +1412,11 @@ def send_payslip(db: Session, *, to: str, pdf: Attachment, employee_name: str, p
 def send_test_email(db: Session, *, to: str, requested_by: str, company_id: uuid.UUID | None,
                     created_by: uuid.UUID | None) -> SendResult:
     body = render_email("test_email", {
-        "sender": sender_address() or "—", "requested_by": requested_by,
+        "sender": sender_address(_session_slug(db)) or "—", "requested_by": requested_by,
         "sent_at": datetime.datetime.now(datetime.timezone.utc).strftime("%d %b %Y, %I:%M %p UTC"),
-    }, preheader="Microsoft Graph email integration is working successfully.", db=db, company_id=company_id)
+    }, preheader="Your organisation's email configuration is working.", db=db, company_id=company_id)
     return send_now(db, EmailJob(
-        email_type=TEST, to=[to], subject="HRMS Microsoft Graph Email Test", html_body=body,
+        email_type=TEST, to=[to], subject="HRMS Email Test", html_body=body,
         company_id=company_id, created_by=created_by,
     ))
 

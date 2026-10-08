@@ -51,12 +51,15 @@ class _Settings(unittest.TestCase):
         "microsoft_tenant_id": "t", "microsoft_client_id": "c", "microsoft_client_secret": SECRET,
         "microsoft_from_email": "info@impacgo.com", "microsoft_on_behalf_of": "",
         "microsoft_on_behalf_of_name": "", "email_enabled": True, "email_allowed_domains": "*",
-        "microsoft_graph_max_retries": 0,
+        "microsoft_graph_max_retries": 0, "email_global_fallback_tenants": "*",
     }
 
     def setUp(self):
         for key, value in self.overrides.items():
             mock.patch.object(settings, key, value).start()
+        from app.tenant_email import store
+        mock.patch.object(store, "CONFIG_TTL_SECONDS", 0).start()  # settings change per test: no cached config
+        store.invalidate()
         mock.patch("app.graph_mail.time.sleep", lambda s: None).start()
         graph_mail.invalidate_token()
 

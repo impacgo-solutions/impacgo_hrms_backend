@@ -15,3 +15,5 @@ playwright==1.63.0
 nh3==0.3.7
 # playwright needs its matching browser build (1.63.0 -> chromium 1243):
 #   python -m playwright install chromium   (Linux: --with-deps). See README 'Backend setup'.
+# Authenticated encryption (Fernet) for per-tenant email secrets (app/tenant_email/encryption.py).
+cryptography>=43,<51

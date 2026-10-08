@@ -4179,3 +4179,43 @@ class LearningDocumentHistory(Base):
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     actor_employee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
+
+
+class TenantEmailSettings(Base):
+    """public.tenant_email_settings -- one row per tenant (UNIQUE tenant_id):
+    that tenant's outgoing-email provider and credentials. Every secret column
+    (*_encrypted) holds app/tenant_email/encryption.py ciphertext, never
+    plaintext. Global (public), deliberately NOT duplicated per tenant schema."""
+    __tablename__ = "tenant_email_settings"
+    __table_args__ = {"schema": "public"}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("public.tenants.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    provider: Mapped[str] = mapped_column(String(50), nullable=False, default="smtp")
+    # smtp
+    smtp_host: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    smtp_port: Mapped[int | None] = mapped_column(Integer, nullable=True, default=587)
+    smtp_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    smtp_password_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_use_tls: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    smtp_use_ssl: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # microsoft_graph
+    microsoft_tenant_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    microsoft_client_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    microsoft_client_secret_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # sendgrid
+    sendgrid_api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # ses (SESv2 API)
+    ses_region: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    ses_access_key_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    ses_secret_access_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # common
+    from_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    from_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reply_to: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=func.now())
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
