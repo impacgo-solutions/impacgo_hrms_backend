@@ -1,0 +1,17 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+bcrypt==4.2.1
+PyJWT==2.10.1
+python-multipart==0.0.20
+reportlab==5.0.1
+pypdf==6.19.0
+playwright==1.63.0
+# Allowlist HTML sanitiser for admin-authored document/email templates (M-34).
+nh3==0.3.7
+# playwright needs its matching browser build (1.63.0 -> chromium 1243):
+#   python -m playwright install chromium   (Linux: --with-deps). See README 'Backend setup'.

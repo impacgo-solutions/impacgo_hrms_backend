@@ -1,0 +1,4061 @@
+{
+  "run": "2c4d4b",
+  "tenant": "impacgo-solutions",
+  "results": [
+    {
+      "flow": "auth",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "auth",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "auth",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "auth",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "auth",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "auth",
+      "actor": "Professional / IC Employee (nagasai)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "auth",
+      "actor": "Professional / IC Employee (surya)",
+      "step": "login with shared password",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "leave types available",
+      "pass": true,
+      "status": null,
+      "detail": "GET /api/leave-types returned nothing",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "leave balances returned for self",
+      "pass": true,
+      "status": null,
+      "detail": "no leave-balance rows for this employee -- UI will fall back to client-computed balances",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "c0504c9b-854e-40ca-9021-60c96a259ec9 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "c0504c9b-854e-40ca-9021-60c96a259ec9 not visible to approver via GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 13 -> 14",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You can't approve or reject your own request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "unrelated employee (not in reporting chain) blocked from deciding",
+      "pass": true,
+      "status": 403,
+      "detail": "outsider changed someone else's request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"c0504c9b-854e-40ca-9021-60c96a259ec9\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"employee_name\":\"Soumya Tantravahi\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-03-02\",\"to_date\":\"2027-03-02\",\"days\":1.0,\"reason\":\"[SMOKE] approve-path 2c4d4b\",\"is_half_day\":false,\"half_day_period\":null,\"half_day_time_range\":null,\"status\":\"approved\",\"certificate_file_names\":[],\"approver_id",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 60 -> 61",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "balance 'used' +1 after approval",
+      "pass": true,
+      "status": null,
+      "detail": "used 1.0 -> 2.0",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "overlapping leave refused",
+      "pass": true,
+      "status": 409,
+      "detail": "duplicate/overlapping leave accepted: {\"detail\":\"You already have a leave request that overlaps these dates.\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "76fe174d-8f71-49ca-ab09-7ca66693b700 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "76fe174d-8f71-49ca-ab09-7ca66693b700 not visible to approver via GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 14 -> 15",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You can't approve or reject your own request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"76fe174d-8f71-49ca-ab09-7ca66693b700\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"employee_name\":\"Soumya Tantravahi\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-03-09\",\"to_date\":\"2027-03-09\",\"days\":1.0,\"reason\":\"[SMOKE] reject-path 2c4d4b\",\"is_half_day\":false,\"half_day_period\":null,\"half_day_time_range\":null,\"status\":\"rejected\",\"certificate_file_names\":[],\"approver_id\"",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 61 -> 62",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already rejected by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "to_date before from_date refused",
+      "pass": true,
+      "status": 422,
+      "detail": "accepted a leave ending before it starts: {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\"],\"msg\":\"Value error, to_date cannot be before from_date\",\"input\":{\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-03-12\",\"to_date\":\"2027-03-10\",\"days\":1,\"reason\":\"[SMOKE] approve-path 2c4d4b\"},\"ctx\":{\"error\":{}}}]}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "8a14bb39-e7c3-493c-9ad9-19694dea84bc not returned by GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "8a14bb39-e7c3-493c-9ad9-19694dea84bc not visible to approver via GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 15 -> 16",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"8a14bb39-e7c3-493c-9ad9-19694dea84bc\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"attendance_date\":\"2026-09-16\",\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"requested_in\":\"2026-09-16T09:30:00Z\",\"requested_out\":\"2026-09-16T18:30:00Z\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"employee_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOK",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 62 -> 63",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "ac63d37c-7be4-49b2-b917-00deb6705856 not returned by GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "ac63d37c-7be4-49b2-b917-00deb6705856 not visible to approver via GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 16 -> 17",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"ac63d37c-7be4-49b2-b917-00deb6705856\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"work_date\":\"2026-09-24\",\"hours\":1.5,\"approved_hours\":1.5,\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"employee_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOKE] approved\",\"decided_at\":\"2026-09-26T17:43:51.391",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 63 -> 64",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "de18d7c2-a875-4d4c-ad25-97ea997ed74b not returned by GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "de18d7c2-a875-4d4c-ad25-97ea997ed74b not visible to approver via GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 17 -> 18",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You may not override your own work entry\"}",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"de18d7c2-a875-4d4c-ad25-97ea997ed74b\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"entry_date\":\"2026-09-25\",\"project\":\"D365 F&O Rollout \u2014 Ironing Boy\",\"task\":\"[SMOKE] task 2c4d4b\",\"task_id\":null,\"category\":\"Development\",\"start_time\":\"10:00:00\",\"end_time\":\"12:00:00\",\"hours\":2.0,\"description\":\"[SMOKE] 2c4d4b\",\"is_billable\":false,\"status\":\"approved\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 64 -> 65",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "6ffd9cfe-edd3-430a-a831-3d4337e61e7b not returned by GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "6ffd9cfe-edd3-430a-a831-3d4337e61e7b not visible to approver via GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 18 -> 19",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You may not override your own timesheet submission\"}",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"6ffd9cfe-edd3-430a-a831-3d4337e61e7b\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"week_start\":\"2026-08-31\",\"status\":\"rejected\",\"total_hours\":0.0,\"billable_hours\":0.0,\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE] rejected\",\"decided_at\":\"2026-09-26T17:44:06.387564Z\",\"submitted_at\":\"2026-09-26T17:44:02.669595Z\"}",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 65 -> 66",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "7c9969b1-0a7b-411b-b68f-cd3e10dfd1be not returned by GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "7c9969b1-0a7b-411b-b68f-cd3e10dfd1be not visible to approver via GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 19 -> 20",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's Reporting Manager or a manager above them in the chain can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"7c9969b1-0a7b-411b-b68f-cd3e10dfd1be\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"purpose\":\"[SMOKE] 2c4d4b\",\"destination\":\"Hyderabad\",\"from_date\":\"2027-05-03\",\"to_date\":\"2027-05-05\",\"travel_mode\":\"Flight\",\"estimated_cost\":12000.0,\"status\":\"approved\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE] approved\",\"decided",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 66 -> 67",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "8df3f75d-b74e-4e60-97e9-358526b12e62 not returned by GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "8df3f75d-b74e-4e60-97e9-358526b12e62 not visible to approver via GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 20 -> 21",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"8df3f75d-b74e-4e60-97e9-358526b12e62\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"reference\":\"[SMOKE]-2c4d4b-0\",\"claim_date\":\"2026-09-26\",\"status\":\"approved\",\"items\":[{\"expense_date\":\"2026-09-23\",\"category\":\"Meals\",\"description\":\"[SMOKE] lunch\",\"amount\":450.0}],\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE] approv",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 67 -> 68",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "2d1790b3-837e-47ef-8bd4-5714d5aa016d not returned by GET /api/reimbursements",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "2d1790b3-837e-47ef-8bd4-5714d5aa016d not visible to approver via GET /api/reimbursements",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 21 -> 22",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"2d1790b3-837e-47ef-8bd4-5714d5aa016d\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"category\":\"Internet\",\"amount\":999.0,\"expense_date\":\"2026-09-22\",\"status\":\"approved\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE] approved\",\"decided_at\":\"2026-09-26T17:44:28.121690Z\",\"decided_by_manager_type\":\"Reporting Manager\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 68 -> 69",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "0f1d1371-9098-4ff3-b560-a42a5656b392 not returned by GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "0f1d1371-9098-4ff3-b560-a42a5656b392 not visible to approver via GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 22 -> 23",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"0f1d1371-9098-4ff3-b560-a42a5656b392\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"asset_type\":\"Laptop\",\"justification\":\"[SMOKE] 2c4d4b\",\"status\":\"rejected\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE] rejected\",\"decided_at\":\"2026-09-26T17:44:34.959371Z\",\"decided_by_manager_type\":\"Reporting Manager\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 69 -> 70",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already rejected by Srikar Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "loan",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create via POST /api/loans",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"4306ccb1-6469-47c0-9748-324511f6e7de\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"loan_type\":\"Salary Advance\",\"principal_amount\":1000.0,\"emi_amount\":500.0,\"outstanding_balance\":1000.0,\"status\":\"active\"}",
+      "severity": null
+    },
+    {
+      "flow": "loan",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in own list",
+      "pass": true,
+      "status": 200,
+      "detail": "4306ccb1-6469-47c0-9748-324511f6e7de not in GET /api/loans",
+      "severity": null
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create via POST /api/tax-declarations",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"f62fcb4a-7b97-4df3-8172-41d9f92a3923\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"fiscal_year\":\"2026-27\",\"tax_regime\":\"new\",\"hra_claimed\":0.0,\"section_80c\":0.0,\"status\":\"draft\"}",
+      "severity": null
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in own list",
+      "pass": true,
+      "status": 200,
+      "detail": "f62fcb4a-7b97-4df3-8172-41d9f92a3923 not in GET /api/tax-declarations",
+      "severity": null
+    },
+    {
+      "flow": "skills",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "upsert own skill rating",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"skill\":\"[SMOKE] Python\",\"level\":\"Advanced\"}",
+      "severity": null
+    },
+    {
+      "flow": "recognition",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "give recognition to colleague",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"cc01bf37-26c0-406b-ace2-23dcbbaa15b4\",\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"badge\":\"Team Player\",\"reason\":\"[SMOKE] 2c4d4b\",\"given_on\":\"2026-09-26\"}",
+      "severity": null
+    },
+    {
+      "flow": "okr",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create individual OKR",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"level\":\"Individual\",\"title\":\"[SMOKE] OKR 2c4d4b\",\"owner\":\"Soumya Tantravahi\",\"progress\":0,\"owner_employee_id\":null}",
+      "severity": null
+    },
+    {
+      "flow": "profile",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "update own profile (no-op value)",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"date_of_birth\":\"1989-09-21\",\"gender\":\"Female\",\"personal_email\":\"soumya@impacgo.com\",\"personal_phone\":\"+91 9866220600\",\"current_address\":\"No 9-29-19, Gupta Villa, Third Floor, Balaji Nagar  Visakhapatnam - 530003\",\"permanent_address\":\"No 9-29-19, Gupta Villa, Third Floor, Balaji Nagar  Visakhapatnam - 530003\",\"blood_group\":\"O+\",\"nationality\":\"Indian\",\"marital_status\":\"Married\",\"emergency_contact_",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "clock in",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "start break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"Breaks can only be taken during your shift hours.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "end break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"You don't have a break in progress.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "clock out",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"151bcd5d-b0c1-4ecb-8f83-dd7a007fb397\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"attendance_date\":\"2026-09-26\",\"check_in\":\"2026-09-26T17:44:44.890685Z\",\"check_out\":\"2026-09-26T17:44:47.015532Z\",\"work_hours\":0.0,\"overtime_hours\":0.0,\"status\":\"off_shift\",\"employee_name\":\"Soumya Tantravahi\",\"employee_code\":\"EMP-0002\",\"work_mode\":\"WFO\",\"branch_name\":\"Visakhapatnam Branch\",\"total_brea",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "cannot clock in on behalf of another employee",
+      "pass": false,
+      "status": 200,
+      "detail": "clocked in for adityaram@impacgo.com: {\"id\":\"a28bca4f-6475-46ca-b95f-ce757303af20\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"attendance_date\":\"2026-09-26\",\"check_in\":\"2026-09-2",
+      "severity": "CRITICAL"
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "cannot raise leave on behalf of unrelated employee (HR/Owner may)",
+      "pass": true,
+      "status": 201,
+      "detail": "soumya@impacgo.com raised leave for adityaram@impacgo.com: {\"id\":\"07f09823-3bdf-4ba3-b1a9-a9701cd7e795\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"employee_name\":\"Aditya Panthina\",\"leave_type_name\":",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "leave types available",
+      "pass": true,
+      "status": null,
+      "detail": "GET /api/leave-types returned nothing",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "leave balances returned for self",
+      "pass": true,
+      "status": null,
+      "detail": "no leave-balance rows for this employee -- UI will fall back to client-computed balances",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "ca85b1bc-a408-409d-b896-acf20c1cef42 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "overlapping leave refused",
+      "pass": true,
+      "status": 409,
+      "detail": "duplicate/overlapping leave accepted: {\"detail\":\"You already have a leave request that overlaps these dates.\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "20864dc6-362a-4190-82b4-51c71c0a8680 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "to_date before from_date refused",
+      "pass": true,
+      "status": 422,
+      "detail": "accepted a leave ending before it starts: {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\"],\"msg\":\"Value error, to_date cannot be before from_date\",\"input\":{\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-04-02\",\"to_date\":\"2027-03-31\",\"days\":1,\"reason\":\"[SMOKE] approve-path 2c4d4b\"},\"ctx\":{\"error\":{}}}]}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "4e0e11b2-6b70-4d97-b3cf-c1f97d468ad9 not returned by GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "7d22c3ee-594d-41ba-b0e6-9ea69266fbed not returned by GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "4c0ec84c-4e9f-4657-84cc-8e1d47880b04 not returned by GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "e41b0fbc-09f7-4b12-b6f8-6406483125bc not returned by GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "f364197b-40e6-45a7-a8af-71a330e1a224 not returned by GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "959e51d4-9310-4408-82be-d00511fa140f not returned by GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "094c7f77-e5e7-4331-bda9-1b54f04f1a6c not returned by GET /api/reimbursements",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "45278b06-8184-4d2a-89a5-473807fd2cd1 not returned by GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "has an approver (reporting manager)",
+      "pass": false,
+      "status": null,
+      "detail": "requester has no reporting manager -- nobody can approve this",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "loan",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create via POST /api/loans",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"5e54cc5d-a697-4e57-994e-7f3acfad3b28\",\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"loan_type\":\"Salary Advance\",\"principal_amount\":1000.0,\"emi_amount\":500.0,\"outstanding_balance\":1000.0,\"status\":\"active\"}",
+      "severity": null
+    },
+    {
+      "flow": "loan",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in own list",
+      "pass": true,
+      "status": 200,
+      "detail": "5e54cc5d-a697-4e57-994e-7f3acfad3b28 not in GET /api/loans",
+      "severity": null
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create via POST /api/tax-declarations",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"a4c7e2f2-dc8d-4d5e-98a3-d9c2e2f76893\",\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"fiscal_year\":\"2026-27\",\"tax_regime\":\"new\",\"hra_claimed\":0.0,\"section_80c\":0.0,\"status\":\"draft\"}",
+      "severity": null
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "visible in own list",
+      "pass": true,
+      "status": 200,
+      "detail": "a4c7e2f2-dc8d-4d5e-98a3-d9c2e2f76893 not in GET /api/tax-declarations",
+      "severity": null
+    },
+    {
+      "flow": "skills",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "upsert own skill rating",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"skill\":\"[SMOKE] Python\",\"level\":\"Advanced\"}",
+      "severity": null
+    },
+    {
+      "flow": "recognition",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "give recognition to colleague",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"9362f149-27a8-4a1a-b4e8-dc49c810d239\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"badge\":\"Team Player\",\"reason\":\"[SMOKE] 2c4d4b\",\"given_on\":\"2026-09-26\"}",
+      "severity": null
+    },
+    {
+      "flow": "okr",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "create individual OKR",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"level\":\"Individual\",\"title\":\"[SMOKE] OKR 2c4d4b\",\"owner\":\"Srikar Tantravahi\",\"progress\":0,\"owner_employee_id\":null}",
+      "severity": null
+    },
+    {
+      "flow": "profile",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "update own profile (no-op value)",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"date_of_birth\":\"1989-09-18\",\"gender\":\"Male\",\"personal_email\":\"info@impacgo.com\",\"personal_phone\":\"9866323418\",\"current_address\":\"No 9-29-19, Gupta Villa, Third Floor, Balaji Nagar\\nVisakhapatnam - 530003\",\"permanent_address\":\"No 9-29-19, Gupta Villa, Third Floor, Balaji Nagar\\nVisakhapatnam - 530003\",\"blood_group\":\"O+\",\"nationality\":\"Indian\",\"marital_status\":\"Single\",\"emergency_contact_name\":\"So",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "clock in",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "start break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"Breaks can only be taken during your shift hours.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "end break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"You don't have a break in progress.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "clock out",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"9757ca6e-b7d8-4830-89d0-1b323f610c64\",\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"attendance_date\":\"2026-09-26\",\"check_in\":\"2026-09-26T17:45:31.205229Z\",\"check_out\":\"2026-09-26T17:45:33.286267Z\",\"work_hours\":0.0,\"overtime_hours\":0.0,\"status\":\"off_shift\",\"employee_name\":\"Srikar Tantravahi\",\"employee_code\":\"EMP-0001\",\"work_mode\":\"WFO\",\"branch_name\":\"Visakhapatnam Branch\",\"total_brea",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "cannot clock in on behalf of another employee",
+      "pass": false,
+      "status": 200,
+      "detail": "clocked in for soumya@impacgo.com: {\"id\":\"151bcd5d-b0c1-4ecb-8f83-dd7a007fb397\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"attendance_date\":\"2026-09-26\",\"check_in\":\"2026-09-2",
+      "severity": "CRITICAL"
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "cannot raise leave on behalf of unrelated employee (HR/Owner may)",
+      "pass": true,
+      "status": 201,
+      "detail": "srikar@impacgo.com raised leave for soumya@impacgo.com: {\"id\":\"6dcdca47-f684-4c39-a281-404d18c4510b\",\"employee_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"employee_name\":\"Soumya Tantravahi\",\"leave_type_name",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "leave types available",
+      "pass": true,
+      "status": null,
+      "detail": "GET /api/leave-types returned nothing",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "leave balances returned for self",
+      "pass": true,
+      "status": null,
+      "detail": "no leave-balance rows for this employee -- UI will fall back to client-computed balances",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "74251361-45a3-433d-9f55-139c91558dd6 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "74251361-45a3-433d-9f55-139c91558dd6 not visible to approver via GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 81 -> 82",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You can't approve or reject your own request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "unrelated employee (not in reporting chain) blocked from deciding",
+      "pass": true,
+      "status": 403,
+      "detail": "outsider changed someone else's request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"74251361-45a3-433d-9f55-139c91558dd6\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"employee_name\":\"Aditya Panthina\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-04-13\",\"to_date\":\"2027-04-13\",\"days\":1.0,\"reason\":\"[SMOKE] approve-path 2c4d4b\",\"is_half_day\":false,\"half_day_period\":null,\"half_day_time_range\":null,\"status\":\"approved\",\"certificate_file_names\":[],\"approver_id\":",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 4 -> 5",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "balance 'used' +1 after approval",
+      "pass": false,
+      "status": null,
+      "detail": "used 0.0 -> 0.0",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "overlapping leave refused",
+      "pass": true,
+      "status": 409,
+      "detail": "duplicate/overlapping leave accepted: {\"detail\":\"You already have a leave request that overlaps these dates.\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "dda62955-92f4-4359-b525-df1858762d58 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "dda62955-92f4-4359-b525-df1858762d58 not visible to approver via GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 82 -> 83",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You can't approve or reject your own request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"dda62955-92f4-4359-b525-df1858762d58\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"employee_name\":\"Aditya Panthina\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-04-20\",\"to_date\":\"2027-04-20\",\"days\":1.0,\"reason\":\"[SMOKE] reject-path 2c4d4b\",\"is_half_day\":false,\"half_day_period\":null,\"half_day_time_range\":null,\"status\":\"rejected\",\"certificate_file_names\":[],\"approver_id\":\"",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 5 -> 6",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already rejected by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "to_date before from_date refused",
+      "pass": true,
+      "status": 422,
+      "detail": "accepted a leave ending before it starts: {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\"],\"msg\":\"Value error, to_date cannot be before from_date\",\"input\":{\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-04-23\",\"to_date\":\"2027-04-21\",\"days\":1,\"reason\":\"[SMOKE] approve-path 2c4d4b\"},\"ctx\":{\"error\":{}}}]}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "e8d1066f-e03c-4447-bbc4-284abde336f3 not returned by GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "e8d1066f-e03c-4447-bbc4-284abde336f3 not visible to approver via GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 83 -> 84",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"e8d1066f-e03c-4447-bbc4-284abde336f3\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"attendance_date\":\"2026-09-14\",\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"requested_in\":\"2026-09-14T09:30:00Z\",\"requested_out\":\"2026-09-14T18:30:00Z\",\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"employee_name\":\"Aditya Panthina\",\"decision_notes\":\"[SMOKE]",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 6 -> 7",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "b943dca7-7959-4a34-ace1-47970b1acea5 not returned by GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "b943dca7-7959-4a34-ace1-47970b1acea5 not visible to approver via GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 84 -> 85",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"b943dca7-7959-4a34-ace1-47970b1acea5\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"work_date\":\"2026-09-24\",\"hours\":1.5,\"approved_hours\":1.5,\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"employee_name\":\"Aditya Panthina\",\"decision_notes\":\"[SMOKE] approved\",\"decided_at\":\"2026-09-26T17:46:12.52827",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 7 -> 8",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "ef646b89-3814-4a07-978d-ad7e7209bdf5 not returned by GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "ef646b89-3814-4a07-978d-ad7e7209bdf5 not visible to approver via GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 85 -> 86",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You don't have permission to do this\"}",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"ef646b89-3814-4a07-978d-ad7e7209bdf5\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"entry_date\":\"2026-09-25\",\"project\":\"D365 F&O Rollout \u2014 Ironing Boy\",\"task\":\"[SMOKE] task 2c4d4b\",\"task_id\":null,\"category\":\"Development\",\"start_time\":\"10:00:00\",\"end_time\":\"12:00:00\",\"hours\":2.0,\"description\":\"[SMOKE] 2c4d4b\",\"is_billable\":false,\"status\":\"approved\",\"approver_id\":\"bdb29ef2-a8fd-401a-9",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 8 -> 9",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "2c960e2e-f980-497c-b66d-0f273d52e592 not returned by GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "2c960e2e-f980-497c-b66d-0f273d52e592 not visible to approver via GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 86 -> 87",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You don't have permission to do this\"}",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"2c960e2e-f980-497c-b66d-0f273d52e592\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"week_start\":\"2026-08-17\",\"status\":\"rejected\",\"total_hours\":0.0,\"billable_hours\":0.0,\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOKE] rejected\",\"decided_at\":\"2026-09-26T17:46:27.774885Z\",\"submitted_at\":\"2026-09-26T17:46:23.246167Z\"}",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 9 -> 10",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "44e33243-85c5-431f-b7b4-0524888a2e80 not returned by GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "44e33243-85c5-431f-b7b4-0524888a2e80 not visible to approver via GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 87 -> 88",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's Reporting Manager or a manager above them in the chain can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"44e33243-85c5-431f-b7b4-0524888a2e80\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"purpose\":\"[SMOKE] 2c4d4b\",\"destination\":\"Hyderabad\",\"from_date\":\"2027-05-31\",\"to_date\":\"2027-06-02\",\"travel_mode\":\"Flight\",\"estimated_cost\":12000.0,\"status\":\"approved\",\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOKE] approved\",\"decided",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 10 -> 11",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "9539ba97-abeb-434d-8633-a10e25db7113 not returned by GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "9539ba97-abeb-434d-8633-a10e25db7113 not visible to approver via GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 88 -> 89",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"9539ba97-abeb-434d-8633-a10e25db7113\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"reference\":\"[SMOKE]-2c4d4b-2\",\"claim_date\":\"2026-09-26\",\"status\":\"approved\",\"items\":[{\"expense_date\":\"2026-09-23\",\"category\":\"Meals\",\"description\":\"[SMOKE] lunch\",\"amount\":450.0}],\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOKE] approv",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 11 -> 12",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "f6748a9a-c810-42b4-a2fa-ddb4f3d7c596 not returned by GET /api/reimbursements",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "f6748a9a-c810-42b4-a2fa-ddb4f3d7c596 not visible to approver via GET /api/reimbursements",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 89 -> 90",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"f6748a9a-c810-42b4-a2fa-ddb4f3d7c596\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"category\":\"Internet\",\"amount\":999.0,\"expense_date\":\"2026-09-22\",\"status\":\"approved\",\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOKE] approved\",\"decided_at\":\"2026-09-26T17:46:52.174602Z\",\"decided_by_manager_type\":\"Reporting Manager\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 12 -> 13",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "68665d19-3163-4780-8577-3ddb9e986854 not returned by GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "68665d19-3163-4780-8577-3ddb9e986854 not visible to approver via GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 90 -> 91",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"68665d19-3163-4780-8577-3ddb9e986854\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"asset_type\":\"Laptop\",\"justification\":\"[SMOKE] 2c4d4b\",\"status\":\"rejected\",\"approver_id\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"approver_name\":\"Soumya Tantravahi\",\"decision_notes\":\"[SMOKE] rejected\",\"decided_at\":\"2026-09-26T17:46:59.225841Z\",\"decided_by_manager_type\":\"Reporting Manager\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 13 -> 14",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already rejected by Soumya Tantravahi (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "loan",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create via POST /api/loans",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create via POST /api/tax-declarations",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"513d7e57-5d17-4ccb-845a-4fb0fb4bf5f3\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"fiscal_year\":\"2026-27\",\"tax_regime\":\"new\",\"hra_claimed\":0.0,\"section_80c\":0.0,\"status\":\"draft\"}",
+      "severity": null
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "visible in own list",
+      "pass": true,
+      "status": 200,
+      "detail": "513d7e57-5d17-4ccb-845a-4fb0fb4bf5f3 not in GET /api/tax-declarations",
+      "severity": null
+    },
+    {
+      "flow": "skills",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "upsert own skill rating",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "recognition",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "give recognition to colleague",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "okr",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "create individual OKR",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "profile",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "update own profile (no-op value)",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"date_of_birth\":null,\"gender\":null,\"personal_email\":null,\"personal_phone\":null,\"current_address\":null,\"permanent_address\":null,\"blood_group\":null,\"nationality\":\"Indian\",\"marital_status\":null,\"emergency_contact_name\":null,\"emergency_contact_relation\":null,\"emergency_contact_phone\":null}",
+      "severity": null
+    },
+    {
+      "flow": "profile",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "IC blocked from editing another employee's profile",
+      "pass": true,
+      "status": 403,
+      "detail": "IC edited bhushan@impacgo.com's profile: {\"detail\":\"You don't have permission to do this\"}",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "clock in",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "start break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"You've already taken the maximum of 1 break allowed for your shift.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "end break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"You don't have a break in progress.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "clock out",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"a28bca4f-6475-46ca-b95f-ce757303af20\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"attendance_date\":\"2026-09-26\",\"check_in\":\"2026-09-26T03:30:00Z\",\"check_out\":\"2026-09-26T17:47:09.436068Z\",\"work_hours\":14.29,\"overtime_hours\":0.0,\"status\":\"off_shift\",\"employee_name\":\"Aditya Panthina\",\"employee_code\":\"112\",\"work_mode\":\"WFO\",\"branch_name\":\"Visakhapatnam Branch\",\"total_break_minutes\":1",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "cannot clock in on behalf of another employee",
+      "pass": true,
+      "status": 403,
+      "detail": "clocked in for bhushan@impacgo.com: {\"detail\":\"You can only clock in/out for yourself\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "cannot raise leave on behalf of unrelated employee",
+      "pass": true,
+      "status": 403,
+      "detail": "adityaram@impacgo.com raised leave for bhushan@impacgo.com: {\"detail\":\"You can only submit this for yourself\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "leave types available",
+      "pass": true,
+      "status": null,
+      "detail": "GET /api/leave-types returned nothing",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "leave balances returned for self",
+      "pass": true,
+      "status": null,
+      "detail": "no leave-balance rows for this employee -- UI will fall back to client-computed balances",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "6b9a28b6-20d8-436e-ba5e-217ee253e043 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "6b9a28b6-20d8-436e-ba5e-217ee253e043 not visible to approver via GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 28 -> 29",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You can't approve or reject your own request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "unrelated employee (not in reporting chain) blocked from deciding",
+      "pass": true,
+      "status": 403,
+      "detail": "outsider changed someone else's request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"6b9a28b6-20d8-436e-ba5e-217ee253e043\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"employee_name\":\"Bhushan Gonthina\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-05-04\",\"to_date\":\"2027-05-04\",\"days\":1.0,\"reason\":\"[SMOKE] approve-path 2c4d4b\",\"is_half_day\":false,\"half_day_period\":null,\"half_day_time_range\":null,\"status\":\"approved\",\"certificate_file_names\":[],\"approver_id\"",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 5 -> 6",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "balance 'used' +1 after approval",
+      "pass": false,
+      "status": null,
+      "detail": "used 0.0 -> 0.0",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "overlapping leave refused",
+      "pass": true,
+      "status": 409,
+      "detail": "duplicate/overlapping leave accepted: {\"detail\":\"You already have a leave request that overlaps these dates.\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "9a07703b-d412-4048-a22d-073892a7f5d3 not returned by GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "9a07703b-d412-4048-a22d-073892a7f5d3 not visible to approver via GET /api/leave-requests",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 29 -> 30",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You can't approve or reject your own request\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"9a07703b-d412-4048-a22d-073892a7f5d3\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"employee_name\":\"Bhushan Gonthina\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-05-11\",\"to_date\":\"2027-05-11\",\"days\":1.0,\"reason\":\"[SMOKE] reject-path 2c4d4b\",\"is_half_day\":false,\"half_day_period\":null,\"half_day_time_range\":null,\"status\":\"rejected\",\"certificate_file_names\":[],\"approver_id\":",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 6 -> 7",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already rejected by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "to_date before from_date refused",
+      "pass": true,
+      "status": 422,
+      "detail": "accepted a leave ending before it starts: {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\"],\"msg\":\"Value error, to_date cannot be before from_date\",\"input\":{\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"leave_type_name\":\"Bereavement Leave\",\"from_date\":\"2027-05-14\",\"to_date\":\"2027-05-12\",\"days\":1,\"reason\":\"[SMOKE] approve-path 2c4d4b\"},\"ctx\":{\"error\":{}}}]}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "eed81c13-5aee-46cd-bc11-aef359d70b99 not returned by GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "eed81c13-5aee-46cd-bc11-aef359d70b99 not visible to approver via GET /api/attendance/regularizations",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 30 -> 31",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"eed81c13-5aee-46cd-bc11-aef359d70b99\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"attendance_date\":\"2026-09-11\",\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"requested_in\":\"2026-09-11T09:30:00Z\",\"requested_out\":\"2026-09-11T18:30:00Z\",\"approver_id\":\"5ec65d91-7c59-49c9-b0c8-f18d990f8ee5\",\"approver_name\":\"Tata Venkata Narasimha Manisha\",\"employee_name\":\"Bhushan Gonthina\",\"decision_n",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 7 -> 8",
+      "severity": null
+    },
+    {
+      "flow": "regularization",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "eef4c3a5-4ba2-4713-8bf6-64880a90d701 not returned by GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "eef4c3a5-4ba2-4713-8bf6-64880a90d701 not visible to approver via GET /api/overtime-requests",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 31 -> 32",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"eef4c3a5-4ba2-4713-8bf6-64880a90d701\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"work_date\":\"2026-09-24\",\"hours\":1.5,\"approved_hours\":1.5,\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"approver_id\":\"5ec65d91-7c59-49c9-b0c8-f18d990f8ee5\",\"approver_name\":\"Tata Venkata Narasimha Manisha\",\"employee_name\":\"Bhushan Gonthina\",\"decision_notes\":\"[SMOKE] approved\",\"decided_at\":\"2026-09-26T",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 8 -> 9",
+      "severity": null
+    },
+    {
+      "flow": "overtime",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "e05bb474-55fb-4a8a-bd89-704067b607d6 not returned by GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "e05bb474-55fb-4a8a-bd89-704067b607d6 not visible to approver via GET /api/work-entries",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 32 -> 33",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You don't have permission to do this\"}",
+      "severity": null
+    },
+    {
+      "flow": "work-entry",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "e2f5029e-dd58-4c3c-aae5-7fd7ff16b337 not returned by GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "e2f5029e-dd58-4c3c-aae5-7fd7ff16b337 not visible to approver via GET /api/timesheets",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 33 -> 34",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"You don't have permission to do this\"}",
+      "severity": null
+    },
+    {
+      "flow": "timesheet",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "rejected by reporting manager",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "5445eb51-712c-491f-86eb-2c9de217a342 not returned by GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "5445eb51-712c-491f-86eb-2c9de217a342 not visible to approver via GET /api/travel-requests",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 34 -> 35",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's Reporting Manager or a manager above them in the chain can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"5445eb51-712c-491f-86eb-2c9de217a342\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"purpose\":\"[SMOKE] 2c4d4b\",\"destination\":\"Hyderabad\",\"from_date\":\"2027-06-14\",\"to_date\":\"2027-06-16\",\"travel_mode\":\"Flight\",\"estimated_cost\":12000.0,\"status\":\"approved\",\"approver_id\":\"5ec65d91-7c59-49c9-b0c8-f18d990f8ee5\",\"approver_name\":\"Tata Venkata Narasimha Manisha\",\"decision_notes\":\"[SMOKE] appro",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 9 -> 10",
+      "severity": null
+    },
+    {
+      "flow": "travel",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "50766a69-cf1d-4966-b25f-7f85b45999be not returned by GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "50766a69-cf1d-4966-b25f-7f85b45999be not visible to approver via GET /api/expense-reports",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 35 -> 36",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"50766a69-cf1d-4966-b25f-7f85b45999be\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"reference\":\"[SMOKE]-2c4d4b-3\",\"claim_date\":\"2026-09-26\",\"status\":\"approved\",\"items\":[{\"expense_date\":\"2026-09-23\",\"category\":\"Meals\",\"description\":\"[SMOKE] lunch\",\"amount\":450.0}],\"approver_id\":\"5ec65d91-7c59-49c9-b0c8-f18d990f8ee5\",\"approver_name\":\"Tata Venkata Narasimha Manisha\",\"decision_notes\":\"[",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 10 -> 11",
+      "severity": null
+    },
+    {
+      "flow": "expense-report",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "71023517-89ab-45a8-82ab-f36076308453 not returned by GET /api/reimbursements",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": false,
+      "status": 200,
+      "detail": "71023517-89ab-45a8-82ab-f36076308453 not visible to approver via GET /api/reimbursements",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 36 -> 37",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approved by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"71023517-89ab-45a8-82ab-f36076308453\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"category\":\"Internet\",\"amount\":999.0,\"expense_date\":\"2026-09-22\",\"status\":\"approved\",\"approver_id\":\"5ec65d91-7c59-49c9-b0c8-f18d990f8ee5\",\"approver_name\":\"Tata Venkata Narasimha Manisha\",\"decision_notes\":\"[SMOKE] approved\",\"decided_at\":\"2026-09-26T17:48:18.646537Z\",\"decided_by_manager_type\":\"Reporting",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == approved",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='approved'",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 11 -> 12",
+      "severity": null
+    },
+    {
+      "flow": "reimbursement",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already approved by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in requester's own list",
+      "pass": true,
+      "status": 200,
+      "detail": "659e132d-5427-4100-9df9-87740d85fce4 not returned by GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "visible in approver's list",
+      "pass": true,
+      "status": 200,
+      "detail": "659e132d-5427-4100-9df9-87740d85fce4 not visible to approver via GET /api/asset-requests",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "approver notified of new request",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 37 -> 38",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "self-approval blocked",
+      "pass": true,
+      "status": 403,
+      "detail": "requester could approve own request: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "rejected by reporting manager",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"659e132d-5427-4100-9df9-87740d85fce4\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"asset_type\":\"Laptop\",\"justification\":\"[SMOKE] 2c4d4b\",\"status\":\"rejected\",\"approver_id\":\"5ec65d91-7c59-49c9-b0c8-f18d990f8ee5\",\"approver_name\":\"Tata Venkata Narasimha Manisha\",\"decision_notes\":\"[SMOKE] rejected\",\"decided_at\":\"2026-09-26T17:48:25.540451Z\",\"decided_by_manager_type\":\"Reporting Manager\"}",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "response status == rejected",
+      "pass": true,
+      "status": 200,
+      "detail": "server returned status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester sees persisted decision",
+      "pass": true,
+      "status": null,
+      "detail": "requester sees status='rejected'",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "requester notified of decision",
+      "pass": true,
+      "status": null,
+      "detail": "unread-count 12 -> 13",
+      "severity": null
+    },
+    {
+      "flow": "asset-request",
+      "actor": "Professional / IC Employee (manisha)",
+      "step": "second decision refused",
+      "pass": true,
+      "status": 409,
+      "detail": "already-decided request was decided again: {\"detail\":\"This request was already rejected by Tata Venkata Narasimha Manisha (Reporting Manager) and cannot be decided again\"}",
+      "severity": null
+    },
+    {
+      "flow": "loan",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create via POST /api/loans",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "HIGH"
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create via POST /api/tax-declarations",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"026c5f2b-7596-48d7-b5b8-bf4be264fc52\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"fiscal_year\":\"2026-27\",\"tax_regime\":\"new\",\"hra_claimed\":0.0,\"section_80c\":0.0,\"status\":\"draft\"}",
+      "severity": null
+    },
+    {
+      "flow": "tax-declaration",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "visible in own list",
+      "pass": true,
+      "status": 200,
+      "detail": "026c5f2b-7596-48d7-b5b8-bf4be264fc52 not in GET /api/tax-declarations",
+      "severity": null
+    },
+    {
+      "flow": "skills",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "upsert own skill rating",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "recognition",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "give recognition to colleague",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "okr",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "create individual OKR",
+      "pass": false,
+      "status": 403,
+      "detail": "{\"detail\":\"You don't have permission to do this\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "profile",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "update own profile (no-op value)",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"date_of_birth\":null,\"gender\":null,\"personal_email\":null,\"personal_phone\":null,\"current_address\":null,\"permanent_address\":null,\"blood_group\":null,\"nationality\":\"Indian\",\"marital_status\":null,\"emergency_contact_name\":null,\"emergency_contact_relation\":null,\"emergency_contact_phone\":null}",
+      "severity": null
+    },
+    {
+      "flow": "profile",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "IC blocked from editing another employee's profile",
+      "pass": true,
+      "status": 403,
+      "detail": "IC edited adityaram@impacgo.com's profile: {\"detail\":\"You don't have permission to do this\"}",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "clock in",
+      "pass": true,
+      "status": 200,
+      "detail": "",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "start break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"Breaks can only be taken during your shift hours.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "end break",
+      "pass": false,
+      "status": 400,
+      "detail": "{\"detail\":\"You don't have a break in progress.\"}",
+      "severity": "MEDIUM"
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "clock out",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"705854cc-bf9b-43c9-bca0-e7d48f2ce068\",\"employee_id\":\"1fb7f171-a6fe-4997-9c53-8079540932ee\",\"attendance_date\":\"2026-09-26\",\"check_in\":\"2026-09-26T03:30:00Z\",\"check_out\":\"2026-09-26T17:48:35.373368Z\",\"work_hours\":14.31,\"overtime_hours\":0.0,\"status\":\"off_shift\",\"employee_name\":\"Bhushan Gonthina\",\"employee_code\":\"113\",\"work_mode\":\"WFO\",\"branch_name\":\"Visakhapatnam Branch\",\"total_break_minutes\":",
+      "severity": null
+    },
+    {
+      "flow": "attendance",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "cannot clock in on behalf of another employee",
+      "pass": true,
+      "status": 403,
+      "detail": "clocked in for adityaram@impacgo.com: {\"detail\":\"You can only clock in/out for yourself\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Professional / IC Employee (bhushan)",
+      "step": "cannot raise leave on behalf of unrelated employee",
+      "pass": true,
+      "status": 403,
+      "detail": "bhushan@impacgo.com raised leave for adityaram@impacgo.com: {\"detail\":\"You can only submit this for yourself\"}",
+      "severity": null
+    },
+    {
+      "flow": "hiring-requisition",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "create",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"e89b88c3-7ba1-418a-a47a-ab1ab874e0d1\",\"requested_by\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"designation_title\":\"[SMOKE] QA Engineer\",\"department_name\":\"\u2014\",\"positions_count\":1,\"justification\":\"[SMOKE] 2c4d4b\",\"status\":\"pending\",\"approver_id\":null,\"approver_name\":\"\u2014\",\"decision_notes\":null,\"decided_at\":null,\"decided_by_manager_type\":null}",
+      "severity": null
+    },
+    {
+      "flow": "hiring-requisition",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "approve",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"e89b88c3-7ba1-418a-a47a-ab1ab874e0d1\",\"requested_by\":\"bdb29ef2-a8fd-401a-9396-b47f5f291c29\",\"designation_title\":\"[SMOKE] QA Engineer\",\"department_name\":\"\u2014\",\"positions_count\":1,\"justification\":\"[SMOKE] 2c4d4b\",\"status\":\"approved\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE]\",\"decided_at\":\"2026-09-26T17:48:39.974325Z\",\"deci",
+      "severity": null
+    },
+    {
+      "flow": "salary-revision",
+      "actor": "HR / Recruitment Staff (soumya)",
+      "step": "raise for adityaram",
+      "pass": true,
+      "status": 201,
+      "detail": "{\"id\":\"1e865a5a-9e3b-477f-8bdf-89d8d160ae7c\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"current_ctc\":100000,\"proposed_ctc\":100001,\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"pending\",\"approver_id\":null,\"approver_name\":\"\u2014\",\"decision_notes\":null,\"decided_at\":null,\"decided_by_manager_type\":null}",
+      "severity": null
+    },
+    {
+      "flow": "salary-revision",
+      "actor": "Professional / IC Employee (adityaram)",
+      "step": "subject IC cannot approve own salary revision",
+      "pass": true,
+      "status": 403,
+      "detail": "IC approved own raise: {\"detail\":\"Only this employee's assigned Reporting Manager can act on this request\"}",
+      "severity": null
+    },
+    {
+      "flow": "salary-revision",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "reject",
+      "pass": true,
+      "status": 200,
+      "detail": "{\"id\":\"1e865a5a-9e3b-477f-8bdf-89d8d160ae7c\",\"employee_id\":\"a3170980-a81e-4f79-8c1c-561c284d40d7\",\"current_ctc\":100000,\"proposed_ctc\":100001,\"reason\":\"[SMOKE] 2c4d4b\",\"status\":\"rejected\",\"approver_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"approver_name\":\"Srikar Tantravahi\",\"decision_notes\":\"[SMOKE]\",\"decided_at\":\"2026-09-26T17:48:44.110520Z\",\"decided_by_manager_type\":\"Dotted-Line Manager\"}",
+      "severity": null
+    },
+    {
+      "flow": "leave",
+      "actor": "Organization Owner / CEO (srikar)",
+      "step": "top-of-hierarchy user can raise leave",
+      "pass": true,
+      "status": 201,
+      "detail": "Owner/CEO has no reporting manager so can never apply for leave: {\"id\":\"4a57d591-d4ff-4db9-9f70-398d95da5e02\",\"employee_id\":\"5bcce5ea-92e3-4d9e-a643-4dfa66da944d\",\"employee_name\":\"Srikar Tantravahi\",\"leave_type_name\":\"Compensatory Off\",\"from_date\":\"2027-08-02\",\"to_",
+      "severity": null
+    }
+  ],
+  "created": [
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "c0504c9b-854e-40ca-9021-60c96a259ec9",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "76fe174d-8f71-49ca-ab09-7ca66693b700",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "regularization",
+      "path": "/api/attendance/regularizations",
+      "id": "8a14bb39-e7c3-493c-9ad9-19694dea84bc",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "overtime",
+      "path": "/api/overtime-requests",
+      "id": "ac63d37c-7be4-49b2-b917-00deb6705856",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "work-entry",
+      "path": "/api/work-entries",
+      "id": "de18d7c2-a875-4d4c-ad25-97ea997ed74b",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "timesheet",
+      "path": "/api/timesheets",
+      "id": "6ffd9cfe-edd3-430a-a831-3d4337e61e7b",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "travel",
+      "path": "/api/travel-requests",
+      "id": "7c9969b1-0a7b-411b-b68f-cd3e10dfd1be",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "expense-report",
+      "path": "/api/expense-reports",
+      "id": "8df3f75d-b74e-4e60-97e9-358526b12e62",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "reimbursement",
+      "path": "/api/reimbursements",
+      "id": "2d1790b3-837e-47ef-8bd4-5714d5aa016d",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "asset-request",
+      "path": "/api/asset-requests",
+      "id": "0f1d1371-9098-4ff3-b560-a42a5656b392",
+      "by": "soumya@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "loan",
+      "path": "/api/loans",
+      "id": "4306ccb1-6469-47c0-9748-324511f6e7de",
+      "by": "soumya@impacgo.com"
+    },
+    {
+      "flow": "tax-declaration",
+      "path": "/api/tax-declarations",
+      "id": "f62fcb4a-7b97-4df3-8172-41d9f92a3923",
+      "by": "soumya@impacgo.com"
+    },
+    {
+      "flow": "recognition",
+      "path": "/api/recognitions",
+      "id": "cc01bf37-26c0-406b-ace2-23dcbbaa15b4",
+      "by": "soumya@impacgo.com"
+    },
+    {
+      "flow": "okr",
+      "path": "/api/okrs",
+      "id": null,
+      "by": "soumya@impacgo.com"
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "07f09823-3bdf-4ba3-b1a9-a9701cd7e795",
+      "by": "soumya@impacgo.com",
+      "note": "on behalf of adityaram@impacgo.com"
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "ca85b1bc-a408-409d-b896-acf20c1cef42",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "20864dc6-362a-4190-82b4-51c71c0a8680",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "regularization",
+      "path": "/api/attendance/regularizations",
+      "id": "4e0e11b2-6b70-4d97-b3cf-c1f97d468ad9",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "overtime",
+      "path": "/api/overtime-requests",
+      "id": "7d22c3ee-594d-41ba-b0e6-9ea69266fbed",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "work-entry",
+      "path": "/api/work-entries",
+      "id": "4c0ec84c-4e9f-4657-84cc-8e1d47880b04",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "timesheet",
+      "path": "/api/timesheets",
+      "id": "e41b0fbc-09f7-4b12-b6f8-6406483125bc",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "travel",
+      "path": "/api/travel-requests",
+      "id": "f364197b-40e6-45a7-a8af-71a330e1a224",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "expense-report",
+      "path": "/api/expense-reports",
+      "id": "959e51d4-9310-4408-82be-d00511fa140f",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "reimbursement",
+      "path": "/api/reimbursements",
+      "id": "094c7f77-e5e7-4331-bda9-1b54f04f1a6c",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "asset-request",
+      "path": "/api/asset-requests",
+      "id": "45278b06-8184-4d2a-89a5-473807fd2cd1",
+      "by": "srikar@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "loan",
+      "path": "/api/loans",
+      "id": "5e54cc5d-a697-4e57-994e-7f3acfad3b28",
+      "by": "srikar@impacgo.com"
+    },
+    {
+      "flow": "tax-declaration",
+      "path": "/api/tax-declarations",
+      "id": "a4c7e2f2-dc8d-4d5e-98a3-d9c2e2f76893",
+      "by": "srikar@impacgo.com"
+    },
+    {
+      "flow": "recognition",
+      "path": "/api/recognitions",
+      "id": "9362f149-27a8-4a1a-b4e8-dc49c810d239",
+      "by": "srikar@impacgo.com"
+    },
+    {
+      "flow": "okr",
+      "path": "/api/okrs",
+      "id": null,
+      "by": "srikar@impacgo.com"
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "6dcdca47-f684-4c39-a281-404d18c4510b",
+      "by": "srikar@impacgo.com",
+      "note": "on behalf of soumya@impacgo.com"
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "74251361-45a3-433d-9f55-139c91558dd6",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "dda62955-92f4-4359-b525-df1858762d58",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "regularization",
+      "path": "/api/attendance/regularizations",
+      "id": "e8d1066f-e03c-4447-bbc4-284abde336f3",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "overtime",
+      "path": "/api/overtime-requests",
+      "id": "b943dca7-7959-4a34-ace1-47970b1acea5",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "work-entry",
+      "path": "/api/work-entries",
+      "id": "ef646b89-3814-4a07-978d-ad7e7209bdf5",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "timesheet",
+      "path": "/api/timesheets",
+      "id": "2c960e2e-f980-497c-b66d-0f273d52e592",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "travel",
+      "path": "/api/travel-requests",
+      "id": "44e33243-85c5-431f-b7b4-0524888a2e80",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "expense-report",
+      "path": "/api/expense-reports",
+      "id": "9539ba97-abeb-434d-8633-a10e25db7113",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "reimbursement",
+      "path": "/api/reimbursements",
+      "id": "f6748a9a-c810-42b4-a2fa-ddb4f3d7c596",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "asset-request",
+      "path": "/api/asset-requests",
+      "id": "68665d19-3163-4780-8577-3ddb9e986854",
+      "by": "adityaram@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "tax-declaration",
+      "path": "/api/tax-declarations",
+      "id": "513d7e57-5d17-4ccb-845a-4fb0fb4bf5f3",
+      "by": "adityaram@impacgo.com"
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "6b9a28b6-20d8-436e-ba5e-217ee253e043",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "9a07703b-d412-4048-a22d-073892a7f5d3",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "regularization",
+      "path": "/api/attendance/regularizations",
+      "id": "eed81c13-5aee-46cd-bc11-aef359d70b99",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "overtime",
+      "path": "/api/overtime-requests",
+      "id": "eef4c3a5-4ba2-4713-8bf6-64880a90d701",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "work-entry",
+      "path": "/api/work-entries",
+      "id": "e05bb474-55fb-4a8a-bd89-704067b607d6",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "timesheet",
+      "path": "/api/timesheets",
+      "id": "e2f5029e-dd58-4c3c-aae5-7fd7ff16b337",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "travel",
+      "path": "/api/travel-requests",
+      "id": "5445eb51-712c-491f-86eb-2c9de217a342",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "expense-report",
+      "path": "/api/expense-reports",
+      "id": "50766a69-cf1d-4966-b25f-7f85b45999be",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "reimbursement",
+      "path": "/api/reimbursements",
+      "id": "71023517-89ab-45a8-82ab-f36076308453",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "asset-request",
+      "path": "/api/asset-requests",
+      "id": "659e132d-5427-4100-9df9-87740d85fce4",
+      "by": "bhushan@impacgo.com",
+      "note": null
+    },
+    {
+      "flow": "tax-declaration",
+      "path": "/api/tax-declarations",
+      "id": "026c5f2b-7596-48d7-b5b8-bf4be264fc52",
+      "by": "bhushan@impacgo.com"
+    },
+    {
+      "flow": "hiring-requisition",
+      "path": "/api/hiring-requisitions",
+      "id": "e89b88c3-7ba1-418a-a47a-ab1ab874e0d1",
+      "by": "soumya@impacgo.com"
+    },
+    {
+      "flow": "salary-revision",
+      "path": "/api/salary-revision-requests",
+      "id": "1e865a5a-9e3b-477f-8bdf-89d8d160ae7c",
+      "by": "soumya@impacgo.com"
+    },
+    {
+      "flow": "leave",
+      "path": "/api/leave-requests",
+      "id": "4a57d591-d4ff-4db9-9f70-398d95da5e02",
+      "by": "srikar@impacgo.com"
+    }
+  ]
+}

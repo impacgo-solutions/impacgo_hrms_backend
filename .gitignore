@@ -1,0 +1,13 @@
+﻿__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.err
+.err
+.out
+*.log
+preview_output.html
+title_check.txt
+test_offer_letter.pdf
+.pytest_cache/

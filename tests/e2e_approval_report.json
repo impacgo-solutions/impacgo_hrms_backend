@@ -1,0 +1,217 @@
+[
+ {
+  "check": "Owner sets Company approval mode = Chain",
+  "ok": true,
+  "detail": "{\"mode\":\"sequential\",\"steps\":[{\"approver_type\":\"reporting_manager\",\"role_id\":null,\"user_id\":null},{\"approver_type\":\"dotted_line_manager\",\"role_id\":null,\"user_id\":null}],\"types\":[{\"doctype\":\"leave_requ"
+ },
+ {
+  "check": "GET approval-mode returns the chain in order (R1 -> R2)",
+  "ok": true,
+  "detail": "[{\"approver_type\": \"reporting_manager\", \"role_id\": null, \"user_id\": null}, {\"approver_type\": \"dotted_line_manager\", \"role_id\": null, \"user_id\": null}]"
+ },
+ {
+  "check": "GET approval-mode reports 'sequential' for every request type",
+  "ok": true,
+  "detail": "{\"mode\": \"sequential\", \"steps\": [{\"approver_type\": \"reporting_manager\", \"role_id\": null, \"user_id\": null}, {\"approver_type\": \"dotted_line_manager\", \"role_id\": null, \"user_id\": null}], \"types\": [{\"doct"
+ },
+ {
+  "check": "Non-admin (E1) cannot change the company mode",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Submit: R1 (step 1) is notified",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Submit: R2 (step 2) is NOT notified yet",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Inbox: R1 can decide",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "check": "Inbox: R2 cannot decide yet",
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "check": "R2 approving first is refused (403)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Leave still pending",
+  "ok": true,
+  "detail": "pending"
+ },
+ {
+  "check": "R1 approves step 1 (200)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "After step 1: leave still pending (waiting for R2)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "After step 1: R2 is now notified",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "After step 1: R2 can decide in inbox",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "check": "R1 cannot approve twice (403)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "R2 approves step 2 (200)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Leave fully APPROVED",
+  "ok": true,
+  "detail": "approved"
+ },
+ {
+  "check": "No decision on a finished request (409)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "History: mode sequential, both steps approved, in order",
+  "ok": true,
+  "detail": "{\"mode\": \"sequential\", \"status\": \"approved\", \"current_step\": 2, \"steps\": [{\"step\": 1, \"step_order\": 1, \"state\": \"approved\", \"approvers\": [{\"type\": \"Reporting Manager\", \"name\": \"Ravi R1\"}], \"action\": \"approved\", \"acted_by\": \"Ravi R1\", \"acted_at\": \"2026-10-05T08:20:29.704936+00:00\", \"comments\": \"Step "
+ },
+ {
+  "check": "History: who + when recorded for each step",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Email: R1 emailed before R2 (R2 only after step 1)",
+  "ok": true,
+  "detail": "[('r1@qa-chain-approval.example.com', 'LEAVE_APPLIED', 'SKIPPED'), ('r2@qa-chain-approval.example.com', 'LEAVE_APPLIED', 'SKIPPED'), ('e1@qa-chain-approval.example.com', 'LEAVE_APPROVED', 'SKIPPED')]"
+ },
+ {
+  "check": "Email: test mail was logged but NOT sent (domain-restricted)",
+  "ok": true,
+  "detail": "[('r1@qa-chain-approval.example.com', 'LEAVE_APPLIED', 'SKIPPED'), ('r2@qa-chain-approval.example.com', 'LEAVE_APPLIED', 'SKIPPED'), ('e1@qa-chain-approval.example.com', 'LEAVE_APPROVED', 'SKIPPED')]"
+ },
+ {
+  "check": "Chain reject: R1 rejects at step 1 (200)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Chain reject: leave REJECTED",
+  "ok": true,
+  "detail": "rejected"
+ },
+ {
+  "check": "Chain reject: R2 never notified",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Chain reject: R2 cannot act (409)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Chain reject: history = rejected, not reached",
+  "ok": true,
+  "detail": "{\"mode\": \"sequential\", \"status\": \"rejected\", \"current_step\": 1, \"steps\": [{\"step\": 1, \"step_order\": 1, \"state\": \"rejected\", \"approvers\": [{\"type\": \"Reporting Manager\", \"name\": \"Ravi R1\"}], \"action\": \""
+ },
+ {
+  "check": "Owner sets Company approval mode = Parallel",
+  "ok": true,
+  "detail": "{\"mode\":\"parallel\",\"steps\":[{\"approver_type\":\"reporting_manager\",\"role_id\":null,\"user_id\":null},{\"approver_type\":\"dotted_line_manager\",\"role_id\":null,\"user_id\":null}],\"types\":[{\"doctype\":\"leave_reques"
+ },
+ {
+  "check": "GET approval-mode reports 'parallel'",
+  "ok": true,
+  "detail": "{\"mode\": \"parallel\", \"steps\": [{\"approver_type\": \"reporting_manager\", \"role_id\": null, \"user_id\": null}, {\"approver_type\": \"dotted_line_manager\", \"role_id\": null, \"user_id\": null}], \"types\": [{\"doctyp"
+ },
+ {
+  "check": "GET approval-mode returns the shared approver list (R1 or R2)",
+  "ok": true,
+  "detail": "[{\"approver_type\": \"reporting_manager\", \"role_id\": null, \"user_id\": null}, {\"approver_type\": \"dotted_line_manager\", \"role_id\": null, \"user_id\": null}]"
+ },
+ {
+  "check": "Submit: R1 notified",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Submit: R2 notified at the same time",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Inbox: both R1 and R2 can decide",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "R2 approves first (200)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Leave APPROVED immediately (first decision final)",
+  "ok": true,
+  "detail": "approved"
+ },
+ {
+  "check": "R1 can no longer act (409)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "History: mode parallel, approved",
+  "ok": true,
+  "detail": "{\"mode\": \"parallel\", \"status\": \"approved\", \"current_step\": 1, \"steps\": [{\"step\": 1, \"step_order\": 1, \"state\": \"approved\", \"approvers\": [{\"type\": \"Reporting Manager\", \"name\": \"Ravi R1\"}, {\"type\": \"Seco"
+ },
+ {
+  "check": "Parallel reject: R1 rejects (200)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Parallel reject: leave REJECTED",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Parallel reject: R2 cannot act (409)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Reset to default: every type uses reporting managers",
+  "ok": true,
+  "detail": "{\"mode\": \"parallel\", \"steps\": [], \"types\": [{\"doctype\": \"leave_request\", \"label\": \"Leave Request\", \"mode\": \"default\", \"steps\": []}, {\"doctype\": \"leave_withdrawal\", \"label\": \"Leave Withdrawal\", \"mode\":"
+ },
+ {
+  "check": "Default mode: R1 approves directly (200)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "check": "Default mode: leave APPROVED",
+  "ok": true,
+  "detail": ""
+ }
+]
