@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.env.bak
+*.err
+*.out
+db_backups/
+uploads/
+preview_output.html
+title_check.txt

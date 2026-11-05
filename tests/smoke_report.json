@@ -1,0 +1,3052 @@
+{
+  "results": [
+    {
+      "tenant": "impacgo-solutions",
+      "role": "HR / Recruitment Staff",
+      "email": "soumya@impacgo.com",
+      "login": "ok",
+      "calls": [
+        {
+          "path": "/api/auth/me",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 650,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 250,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/scopes",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 210,
+          "detail": ""
+        },
+        {
+          "path": "/api/permissions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 216,
+          "detail": ""
+        },
+        {
+          "path": "/api/rbac-columns",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 173,
+          "detail": ""
+        },
+        {
+          "path": "/api/permission-actions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 323,
+          "detail": ""
+        },
+        {
+          "path": "/api/designations/by-role",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 247,
+          "detail": ""
+        },
+        {
+          "path": "/api/designations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 254,
+          "detail": ""
+        },
+        {
+          "path": "/api/bands",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 254,
+          "detail": ""
+        },
+        {
+          "path": "/api/organization/dashboard-summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 698,
+          "detail": ""
+        },
+        {
+          "path": "/api/company-profile",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 233,
+          "detail": ""
+        },
+        {
+          "path": "/api/org-hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 243,
+          "detail": ""
+        },
+        {
+          "path": "/api/band-hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 386,
+          "detail": ""
+        },
+        {
+          "path": "/api/branches",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 272,
+          "detail": ""
+        },
+        {
+          "path": "/api/business-units",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 308,
+          "detail": ""
+        },
+        {
+          "path": "/api/departments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 421,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 667,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/lifecycle-events",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 616,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/exit-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 541,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/exit-requests/records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 222,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/directory",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 325,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/full",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 1710,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 314,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 356,
+          "detail": ""
+        },
+        {
+          "path": "/api/holidays",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 302,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/leave-gate",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/breaks/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 356,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 469,
+          "detail": ""
+        },
+        {
+          "path": "/api/dashboard/summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 518,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/regularizations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 604,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-types",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 249,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 715,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-balances",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 327,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/deduction-settings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 503,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/reimbursement-items",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 576,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/salary-components",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 282,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/salary-structures",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 395,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslip-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 274,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslip-html-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 277,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslips",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 505,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 639,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/runs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 499,
+          "detail": ""
+        },
+        {
+          "path": "/api/reimbursements",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 498,
+          "detail": ""
+        },
+        {
+          "path": "/api/salary-revision-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 647,
+          "detail": ""
+        },
+        {
+          "path": "/api/loans",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 495,
+          "detail": ""
+        },
+        {
+          "path": "/api/tax-declarations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 499,
+          "detail": ""
+        },
+        {
+          "path": "/api/job-openings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 319,
+          "detail": ""
+        },
+        {
+          "path": "/api/candidate-pipeline",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 568,
+          "detail": ""
+        },
+        {
+          "path": "/api/offers",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 599,
+          "detail": ""
+        },
+        {
+          "path": "/api/offer-letter-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 289,
+          "detail": ""
+        },
+        {
+          "path": "/api/interviews",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 617,
+          "detail": ""
+        },
+        {
+          "path": "/api/hiring-requisitions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 504,
+          "detail": ""
+        },
+        {
+          "path": "/api/okrs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 271,
+          "detail": ""
+        },
+        {
+          "path": "/api/review-cycles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 294,
+          "detail": ""
+        },
+        {
+          "path": "/api/recognitions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/skill-ratings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 283,
+          "detail": ""
+        },
+        {
+          "path": "/api/courses",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 285,
+          "detail": ""
+        },
+        {
+          "path": "/api/certifications",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 281,
+          "detail": ""
+        },
+        {
+          "path": "/api/training-sessions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/benefit-categories",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 525,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-inventory",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 288,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-assignments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 339,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-recovery-deductions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 248,
+          "detail": ""
+        },
+        {
+          "path": "/api/policy-documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 287,
+          "detail": ""
+        },
+        {
+          "path": "/api/document-templates",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 293,
+          "detail": ""
+        },
+        {
+          "path": "/api/document-records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 354,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 543,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/employee-candidates",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 587,
+          "detail": ""
+        },
+        {
+          "path": "/api/project-categories",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 254,
+          "detail": ""
+        },
+        {
+          "path": "/api/task-board",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 289,
+          "detail": ""
+        },
+        {
+          "path": "/api/sprints",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 295,
+          "detail": ""
+        },
+        {
+          "path": "/api/releases",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 522,
+          "detail": ""
+        },
+        {
+          "path": "/api/work-entries",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 431,
+          "detail": ""
+        },
+        {
+          "path": "/api/timesheets",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 477,
+          "detail": ""
+        },
+        {
+          "path": "/api/timesheets/hours-preview",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 247,
+          "detail": ""
+        },
+        {
+          "path": "/api/overtime-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 636,
+          "detail": ""
+        },
+        {
+          "path": "/api/expense-reports",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 692,
+          "detail": ""
+        },
+        {
+          "path": "/api/travel-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 700,
+          "detail": ""
+        },
+        {
+          "path": "/api/audit-logs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 525,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/attendance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 566,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/timesheet",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 483,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/payroll",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 479,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/project",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 677,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/performance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 538,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/utilization",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 471,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/recruitment",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 655,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/leave",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 505,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/regularization",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 515,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/work-entry",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 479,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/people",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 549,
+          "detail": ""
+        },
+        {
+          "path": "/api/notification-preferences",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 206,
+          "detail": ""
+        },
+        {
+          "path": "/api/integrations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 251,
+          "detail": ""
+        },
+        {
+          "path": "/api/company-settings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 269,
+          "detail": ""
+        },
+        {
+          "path": "/api/settings/employee-id-format",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 667,
+          "detail": ""
+        },
+        {
+          "path": "/api/notifications",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 258,
+          "detail": ""
+        },
+        {
+          "path": "/api/notifications/unread-count",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 213,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/field-rules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 436,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/modules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 294,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/approval-workflows",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 245,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/hierarchy-bindings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 208,
+          "detail": ""
+        },
+        {
+          "path": "/api/approvals/inbox-sources",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 2530,
+          "detail": ""
+        },
+        {
+          "path": "/api/users",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 476,
+          "detail": ""
+        },
+        {
+          "path": "/api/me/people-access",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 634,
+          "detail": ""
+        },
+        {
+          "path": "/api/super-admin/profile",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 7,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/users",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/hrms-admins",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/analytics",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/audit-logs",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/notifications",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 4,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/settings/platform",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 4,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/custom-modules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 459,
+          "detail": ""
+        },
+        {
+          "path": "/api/custom-modules/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 245,
+          "detail": ""
+        },
+        {
+          "path": "/api/module-access/catalog",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 681,
+          "detail": ""
+        },
+        {
+          "path": "/api/module-access/grants",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 539,
+          "detail": ""
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 6,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/fb92b7cb-7df1-40b6-b4cb-14afa5b9d3b6/matrix",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 287,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/fb92b7cb-7df1-40b6-b4cb-14afa5b9d3b6/actions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/lifecycle-events/9af551cf-d4c5-410a-9816-6aa35e4763da",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 573,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 1147,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 616,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/overview",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 714,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/personal",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 584,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/professional",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 777,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/education",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 669,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/payroll",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 698,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/benefits",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 552,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/attendance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 640,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/projects",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 748,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/performance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 608,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/lifecycle",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 605,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/assets",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 531,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/leave",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 550,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts/782c2295-3c3b-49b1-9ac3-bfc93d253124/assignments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 569,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-requests/c99357da-532e-417b-a637-8acc5b86646a/attachments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 407,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslips/75d3a95e-0949-494c-a2d8-67350ba94f61",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 764,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/salary-structure",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 788,
+          "detail": ""
+        },
+        {
+          "path": "/api/benefit-categories/561d7b7e-15f1-4b3b-9a91-6ef34e8e872a/items",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 364,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/status-history",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 367,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 308,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/tasks",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 438,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/allocations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 457,
+          "detail": ""
+        },
+        {
+          "path": "/api/work-entries/10fe94d4-c90c-431d-8c81-7df40e569cf3/attachments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 276,
+          "detail": ""
+        },
+        {
+          "path": "/api/users/8159db63-1eca-451e-93b9-da81e3d63a71/roles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 731,
+          "detail": ""
+        }
+      ],
+      "login_role": "HR / Recruitment Staff",
+      "permissions": 90
+    },
+    {
+      "tenant": "impacgo-solutions",
+      "role": "Organization Owner / CEO",
+      "email": "srikar@impacgo.com",
+      "login": "ok",
+      "calls": [
+        {
+          "path": "/api/auth/me",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 531,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 255,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/scopes",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 209,
+          "detail": ""
+        },
+        {
+          "path": "/api/permissions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 216,
+          "detail": ""
+        },
+        {
+          "path": "/api/rbac-columns",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 174,
+          "detail": ""
+        },
+        {
+          "path": "/api/permission-actions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 323,
+          "detail": ""
+        },
+        {
+          "path": "/api/designations/by-role",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 249,
+          "detail": ""
+        },
+        {
+          "path": "/api/designations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 250,
+          "detail": ""
+        },
+        {
+          "path": "/api/bands",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 242,
+          "detail": ""
+        },
+        {
+          "path": "/api/organization/dashboard-summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 631,
+          "detail": ""
+        },
+        {
+          "path": "/api/company-profile",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 240,
+          "detail": ""
+        },
+        {
+          "path": "/api/org-hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 241,
+          "detail": ""
+        },
+        {
+          "path": "/api/band-hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 389,
+          "detail": ""
+        },
+        {
+          "path": "/api/branches",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 272,
+          "detail": ""
+        },
+        {
+          "path": "/api/business-units",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 315,
+          "detail": ""
+        },
+        {
+          "path": "/api/departments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 417,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 590,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/lifecycle-events",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 528,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/exit-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 444,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/exit-requests/records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 224,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/directory",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 330,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/full",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 1649,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 314,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 349,
+          "detail": ""
+        },
+        {
+          "path": "/api/holidays",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 287,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/leave-gate",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 300,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/breaks/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 347,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 428,
+          "detail": ""
+        },
+        {
+          "path": "/api/dashboard/summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 512,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/regularizations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 403,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-types",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 243,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 501,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-balances",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/deduction-settings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 428,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/reimbursement-items",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 514,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/salary-components",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 282,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/salary-structures",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 357,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslip-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 291,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslip-html-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 290,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslips",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 447,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 606,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/runs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 445,
+          "detail": ""
+        },
+        {
+          "path": "/api/reimbursements",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 429,
+          "detail": ""
+        },
+        {
+          "path": "/api/salary-revision-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 437,
+          "detail": ""
+        },
+        {
+          "path": "/api/loans",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 440,
+          "detail": ""
+        },
+        {
+          "path": "/api/tax-declarations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 427,
+          "detail": ""
+        },
+        {
+          "path": "/api/job-openings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 486,
+          "detail": ""
+        },
+        {
+          "path": "/api/candidate-pipeline",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 506,
+          "detail": ""
+        },
+        {
+          "path": "/api/offers",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 534,
+          "detail": ""
+        },
+        {
+          "path": "/api/offer-letter-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 293,
+          "detail": ""
+        },
+        {
+          "path": "/api/interviews",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 554,
+          "detail": ""
+        },
+        {
+          "path": "/api/hiring-requisitions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 440,
+          "detail": ""
+        },
+        {
+          "path": "/api/okrs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 283,
+          "detail": ""
+        },
+        {
+          "path": "/api/review-cycles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 288,
+          "detail": ""
+        },
+        {
+          "path": "/api/recognitions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 296,
+          "detail": ""
+        },
+        {
+          "path": "/api/skill-ratings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 289,
+          "detail": ""
+        },
+        {
+          "path": "/api/courses",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 291,
+          "detail": ""
+        },
+        {
+          "path": "/api/certifications",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 281,
+          "detail": ""
+        },
+        {
+          "path": "/api/training-sessions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 292,
+          "detail": ""
+        },
+        {
+          "path": "/api/benefit-categories",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 508,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-inventory",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 286,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-assignments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 355,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 291,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-recovery-deductions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 252,
+          "detail": ""
+        },
+        {
+          "path": "/api/policy-documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 319,
+          "detail": ""
+        },
+        {
+          "path": "/api/document-templates",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 283,
+          "detail": ""
+        },
+        {
+          "path": "/api/document-records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 322,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 543,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/employee-candidates",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 516,
+          "detail": ""
+        },
+        {
+          "path": "/api/project-categories",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 247,
+          "detail": ""
+        },
+        {
+          "path": "/api/task-board",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 283,
+          "detail": ""
+        },
+        {
+          "path": "/api/sprints",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 291,
+          "detail": ""
+        },
+        {
+          "path": "/api/releases",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 529,
+          "detail": ""
+        },
+        {
+          "path": "/api/work-entries",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 413,
+          "detail": ""
+        },
+        {
+          "path": "/api/timesheets",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 397,
+          "detail": ""
+        },
+        {
+          "path": "/api/timesheets/hours-preview",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 253,
+          "detail": ""
+        },
+        {
+          "path": "/api/overtime-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 388,
+          "detail": ""
+        },
+        {
+          "path": "/api/expense-reports",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 460,
+          "detail": ""
+        },
+        {
+          "path": "/api/travel-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 459,
+          "detail": ""
+        },
+        {
+          "path": "/api/audit-logs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 478,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/attendance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 513,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/timesheet",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 407,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/payroll",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 394,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/project",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 610,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/performance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 471,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/utilization",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 401,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/recruitment",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 587,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/leave",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 451,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/regularization",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 440,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/work-entry",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 412,
+          "detail": ""
+        },
+        {
+          "path": "/api/reports/people",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 484,
+          "detail": ""
+        },
+        {
+          "path": "/api/notification-preferences",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 227,
+          "detail": ""
+        },
+        {
+          "path": "/api/integrations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 258,
+          "detail": ""
+        },
+        {
+          "path": "/api/company-settings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 251,
+          "detail": ""
+        },
+        {
+          "path": "/api/settings/employee-id-format",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 587,
+          "detail": ""
+        },
+        {
+          "path": "/api/notifications",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 265,
+          "detail": ""
+        },
+        {
+          "path": "/api/notifications/unread-count",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 211,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/field-rules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 438,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/modules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 296,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/approval-workflows",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 260,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/hierarchy-bindings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 225,
+          "detail": ""
+        },
+        {
+          "path": "/api/approvals/inbox-sources",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 2252,
+          "detail": ""
+        },
+        {
+          "path": "/api/users",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 405,
+          "detail": ""
+        },
+        {
+          "path": "/api/me/people-access",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 503,
+          "detail": ""
+        },
+        {
+          "path": "/api/super-admin/profile",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/users",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 6,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/hrms-admins",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/analytics",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 4,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/audit-logs",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 4,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/notifications",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/settings/platform",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 3,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/custom-modules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 394,
+          "detail": ""
+        },
+        {
+          "path": "/api/custom-modules/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 260,
+          "detail": ""
+        },
+        {
+          "path": "/api/module-access/catalog",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 632,
+          "detail": ""
+        },
+        {
+          "path": "/api/module-access/grants",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 475,
+          "detail": ""
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 4,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/fb92b7cb-7df1-40b6-b4cb-14afa5b9d3b6/matrix",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 294,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/fb92b7cb-7df1-40b6-b4cb-14afa5b9d3b6/actions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 297,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/lifecycle-events/9af551cf-d4c5-410a-9816-6aa35e4763da",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 492,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 1028,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 514,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/overview",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 621,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/personal",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 466,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/professional",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 690,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/education",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 576,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/payroll",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 596,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/benefits",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 445,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/attendance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 542,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/projects",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 685,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/performance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 514,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/lifecycle",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 500,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/assets",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 439,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/leave",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 429,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts/782c2295-3c3b-49b1-9ac3-bfc93d253124/assignments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 520,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-requests/c99357da-532e-417b-a637-8acc5b86646a/attachments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 333,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslips/75d3a95e-0949-494c-a2d8-67350ba94f61",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 703,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/salary-structure",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 712,
+          "detail": ""
+        },
+        {
+          "path": "/api/benefit-categories/561d7b7e-15f1-4b3b-9a91-6ef34e8e872a/items",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 285,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/status-history",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 351,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 288,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/tasks",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 356,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/allocations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 428,
+          "detail": ""
+        },
+        {
+          "path": "/api/work-entries/10fe94d4-c90c-431d-8c81-7df40e569cf3/attachments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 247,
+          "detail": ""
+        },
+        {
+          "path": "/api/users/8159db63-1eca-451e-93b9-da81e3d63a71/roles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 507,
+          "detail": ""
+        }
+      ],
+      "login_role": "Organization Owner / CEO",
+      "permissions": 69
+    },
+    {
+      "tenant": "impacgo-solutions",
+      "role": "Professional / IC Employee",
+      "email": "adityaram@impacgo.com",
+      "login": "ok",
+      "calls": [
+        {
+          "path": "/api/auth/me",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 709,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 273,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/scopes",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 234,
+          "detail": ""
+        },
+        {
+          "path": "/api/permissions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 250,
+          "detail": ""
+        },
+        {
+          "path": "/api/rbac-columns",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 195,
+          "detail": ""
+        },
+        {
+          "path": "/api/permission-actions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 362,
+          "detail": ""
+        },
+        {
+          "path": "/api/designations/by-role",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 277,
+          "detail": ""
+        },
+        {
+          "path": "/api/designations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 288,
+          "detail": ""
+        },
+        {
+          "path": "/api/bands",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 285,
+          "detail": ""
+        },
+        {
+          "path": "/api/organization/dashboard-summary",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 429,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/company-profile",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 272,
+          "detail": ""
+        },
+        {
+          "path": "/api/org-hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 272,
+          "detail": ""
+        },
+        {
+          "path": "/api/band-hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 429,
+          "detail": ""
+        },
+        {
+          "path": "/api/branches",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 320,
+          "detail": ""
+        },
+        {
+          "path": "/api/business-units",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 349,
+          "detail": ""
+        },
+        {
+          "path": "/api/departments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 489,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 512,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/employees/lifecycle-events",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 518,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/employees/exit-requests",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 520,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/employees/exit-requests/records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 243,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/directory",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 365,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/full",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 528,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/shifts",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 361,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 393,
+          "detail": ""
+        },
+        {
+          "path": "/api/holidays",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 321,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/leave-gate",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 320,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/breaks/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 439,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 531,
+          "detail": ""
+        },
+        {
+          "path": "/api/dashboard/summary",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 647,
+          "detail": ""
+        },
+        {
+          "path": "/api/attendance/regularizations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 642,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-types",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 293,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 761,
+          "detail": ""
+        },
+        {
+          "path": "/api/leave-balances",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 371,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/deduction-settings",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 521,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/payroll/reimbursement-items",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 516,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/payroll/salary-components",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 320,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/salary-structures",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 410,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslip-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 325,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslip-html-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 357,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslips",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 505,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/summary",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 398,
+          "detail": "{\"detail\":\"You don't have permission to view this\"}"
+        },
+        {
+          "path": "/api/payroll/runs",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 518,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reimbursements",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 554,
+          "detail": ""
+        },
+        {
+          "path": "/api/salary-revision-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 479,
+          "detail": ""
+        },
+        {
+          "path": "/api/loans",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 631,
+          "detail": ""
+        },
+        {
+          "path": "/api/tax-declarations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 481,
+          "detail": ""
+        },
+        {
+          "path": "/api/job-openings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 354,
+          "detail": ""
+        },
+        {
+          "path": "/api/candidate-pipeline",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 481,
+          "detail": "{\"detail\":\"You don't have permission to view this\"}"
+        },
+        {
+          "path": "/api/offers",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 504,
+          "detail": "{\"detail\":\"You don't have permission to view this\"}"
+        },
+        {
+          "path": "/api/offer-letter-template",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 313,
+          "detail": ""
+        },
+        {
+          "path": "/api/interviews",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 561,
+          "detail": ""
+        },
+        {
+          "path": "/api/hiring-requisitions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 557,
+          "detail": ""
+        },
+        {
+          "path": "/api/okrs",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 317,
+          "detail": ""
+        },
+        {
+          "path": "/api/review-cycles",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 314,
+          "detail": ""
+        },
+        {
+          "path": "/api/recognitions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 319,
+          "detail": ""
+        },
+        {
+          "path": "/api/skill-ratings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 314,
+          "detail": ""
+        },
+        {
+          "path": "/api/courses",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 314,
+          "detail": ""
+        },
+        {
+          "path": "/api/certifications",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 331,
+          "detail": ""
+        },
+        {
+          "path": "/api/training-sessions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 322,
+          "detail": ""
+        },
+        {
+          "path": "/api/benefit-categories",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 531,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-inventory",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 324,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-assignments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 396,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 310,
+          "detail": ""
+        },
+        {
+          "path": "/api/asset-recovery-deductions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 276,
+          "detail": ""
+        },
+        {
+          "path": "/api/policy-documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 319,
+          "detail": ""
+        },
+        {
+          "path": "/api/document-templates",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 319,
+          "detail": ""
+        },
+        {
+          "path": "/api/document-records",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 394,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 625,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/employee-candidates",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 519,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/project-categories",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 281,
+          "detail": ""
+        },
+        {
+          "path": "/api/task-board",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 330,
+          "detail": ""
+        },
+        {
+          "path": "/api/sprints",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 321,
+          "detail": ""
+        },
+        {
+          "path": "/api/releases",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 584,
+          "detail": ""
+        },
+        {
+          "path": "/api/work-entries",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 394,
+          "detail": ""
+        },
+        {
+          "path": "/api/timesheets",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 408,
+          "detail": ""
+        },
+        {
+          "path": "/api/timesheets/hours-preview",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 323,
+          "detail": ""
+        },
+        {
+          "path": "/api/overtime-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 565,
+          "detail": ""
+        },
+        {
+          "path": "/api/expense-reports",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 570,
+          "detail": ""
+        },
+        {
+          "path": "/api/travel-requests",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 598,
+          "detail": ""
+        },
+        {
+          "path": "/api/audit-logs",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 436,
+          "detail": "{\"detail\":\"You don't have permission to view this\"}"
+        },
+        {
+          "path": "/api/reports/attendance",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 515,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/timesheet",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 518,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/payroll",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 521,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/project",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 523,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/performance",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 522,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/utilization",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 516,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/recruitment",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 511,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/leave",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 512,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/regularization",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 516,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/work-entry",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 519,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/reports/people",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 506,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/notification-preferences",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 250,
+          "detail": ""
+        },
+        {
+          "path": "/api/integrations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 286,
+          "detail": ""
+        },
+        {
+          "path": "/api/company-settings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 274,
+          "detail": ""
+        },
+        {
+          "path": "/api/settings/employee-id-format",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 517,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/notifications",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 283,
+          "detail": ""
+        },
+        {
+          "path": "/api/notifications/unread-count",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 243,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/field-rules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 485,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/modules",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 318,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/approval-workflows",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/config/hierarchy-bindings",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 240,
+          "detail": ""
+        },
+        {
+          "path": "/api/approvals/inbox-sources",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 2390,
+          "detail": ""
+        },
+        {
+          "path": "/api/users",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 459,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/me/people-access",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 674,
+          "detail": ""
+        },
+        {
+          "path": "/api/super-admin/profile",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 6,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/users",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 6,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/hrms-admins",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 6,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/analytics",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/audit-logs",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 4,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/super-admin/notifications",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 5,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/settings/platform",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 4,
+          "detail": "{\"detail\":\"Super admin access required\"}"
+        },
+        {
+          "path": "/api/custom-modules",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 435,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/custom-modules/mine",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 316,
+          "detail": ""
+        },
+        {
+          "path": "/api/module-access/catalog",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 441,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/module-access/grants",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 435,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 4,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/fb92b7cb-7df1-40b6-b4cb-14afa5b9d3b6/matrix",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 339,
+          "detail": ""
+        },
+        {
+          "path": "/api/roles/fb92b7cb-7df1-40b6-b4cb-14afa5b9d3b6/actions",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 325,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/hierarchy",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 949,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 377,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/overview",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 479,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/personal",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 313,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/professional",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 561,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/education",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 439,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/payroll",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 443,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/benefits",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 278,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/attendance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 393,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/projects",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 524,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/performance",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 362,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/lifecycle",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 368,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/assets",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 284,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/leave",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 276,
+          "detail": ""
+        },
+        {
+          "path": "/api/shifts/782c2295-3c3b-49b1-9ac3-bfc93d253124/assignments",
+          "status": 403,
+          "verdict": "denied",
+          "ms": 489,
+          "detail": "{\"detail\":\"You don't have permission to do this\"}"
+        },
+        {
+          "path": "/api/leave-requests/e78f80f4-2b18-4e84-9377-b85e6b8346ab/attachments",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 414,
+          "detail": ""
+        },
+        {
+          "path": "/api/payroll/payslips/96e9e0ef-b1b4-49d0-9e75-10857a0af45a",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 729,
+          "detail": ""
+        },
+        {
+          "path": "/api/employees/a3170980-a81e-4f79-8c1c-561c284d40d7/salary-structure",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 758,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/status-history",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 394,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/documents",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 322,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/tasks",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 394,
+          "detail": ""
+        },
+        {
+          "path": "/api/projects/053dfd5d-ba7f-4b1d-97fe-b9045719967c/allocations",
+          "status": 200,
+          "verdict": "ok",
+          "ms": 474,
+          "detail": ""
+        }
+      ],
+      "login_role": "Professional / IC Employee",
+      "permissions": 15
+    }
+  ],
+  "negative": [
+    {
+      "check": "no token -> /api/employees",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "check": "garbage token -> /api/employees",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "check": "unknown email login",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "check": "wrong password login",
+      "status": 401,
+      "pass": true
+    }
+  ]
+}
