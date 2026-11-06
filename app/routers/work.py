@@ -47,6 +47,7 @@ def _work_entry_out(
         employee_id=employee_id,
         entry_date=entry.entry_date,
         project=entry.project.name if entry.project else None,
+        project_code=entry.project.code if entry.project else None,
         # task_name is the free-text title the user typed (schemas.WorkEntryCreate.task);
         # fall back to the linked task-card's title for older rows saved
         # before task_name existed.

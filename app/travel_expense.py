@@ -115,7 +115,7 @@ def claim_types_for(db: Session, company_id: uuid.UUID, claim_id: uuid.UUID | No
 def _resolve_type(types: dict[str, models.ExpenseClaimType], name: str, where: str) -> models.ExpenseClaimType:
     t = types.get((name or "").strip().lower())
     if t is None:
-        _bad(f"'{name}' is not an active Expense Claim Type ({where}). Pick one from the list, "
+        _bad(f"'{name}' is not an active Expense Category ({where}). Pick one from the list, "
              "or ask an administrator to add or re-activate it.")
     return t
 
@@ -310,7 +310,7 @@ def travel_request_out(
     sponsored = money(sum(float(c.sponsored_amount) for c in r.costing))
     funded = money(sum(float(c.funded_amount) for c in r.costing))
     return schemas.TravelRequestOut(
-        id=r.id, employee_id=r.employee_id, purpose=r.purpose, destination=r.destination,
+        id=r.id, request_no=r.request_no, employee_id=r.employee_id, purpose=r.purpose, destination=r.destination,
         from_date=r.from_date, to_date=r.to_date, travel_mode=r.travel_mode,
         estimated_cost=float(r.estimated_cost) if r.estimated_cost is not None else None,
         status=r.status, approver_id=r.approver_id, approver_name=name(r.approver_id),
@@ -474,10 +474,42 @@ def check_claim_links(
                  "or an administrator who can approve claims.", 400)
 
 
+EXPENSE_ENTITY = "expense_report"
+
+
+def _check_line_receipts(db: Session, claim: models.ExpenseClaim, p: schemas.ExpenseReportApiCreate, editing: bool) -> None:
+    """A row's receipt must be a file uploaded to this same report, and one
+    file belongs to one expense row only."""
+    ids = [it.receipt_attachment_id for it in p.items if it.receipt_attachment_id is not None]
+    if not ids:
+        return
+    if len(set(ids)) != len(ids):
+        _bad("The same receipt can't be attached to two expenses.", 422)
+    own = set() if not editing else set(db.scalars(
+        select(models.Attachment.id).where(
+            models.Attachment.entity_type == EXPENSE_ENTITY,
+            models.Attachment.entity_id == claim.id,
+            models.Attachment.id.in_(ids),
+        )))
+    if set(ids) - own:
+        _bad("A receipt no longer exists on this expense report. Upload it again.", 422)
+
+
+def drop_attachments(db: Session, ids: Iterable[uuid.UUID]) -> None:
+    """Deletes receipts no expense row uses any more (file and record)."""
+    from .storage import delete_uploaded_file
+
+    for a in db.scalars(select(models.Attachment).where(models.Attachment.id.in_(list(ids)))).all():
+        delete_uploaded_file(a.file_url)
+        crud.delete_attachment(db, a)
+
+
 def apply_claim(
     db: Session, claim: models.ExpenseClaim, p: schemas.ExpenseReportApiCreate, totals: ClaimTotals,
     employee: models.Employee, can_set_payment_fields: bool, editing: bool = False,
 ) -> None:
+    _check_line_receipts(db, claim, p, editing)
+    old_receipts = {l.receipt_attachment_id for l in claim.lines if l.receipt_attachment_id} if editing else set()
     default_approver = employee.reporting_manager_id
     claim.expense_approver_id = p.expense_approver_id or claim.expense_approver_id or default_approver
     # An edit keeps the claim's own reference and filing date: the form never
@@ -501,9 +533,14 @@ def apply_claim(
             id=uuid.uuid4(), claim_id=claim.id, sort_order=i, expense_date=it.date,
             category=types[it.category.lower()].name if it.category else None,
             claim_type_id=types[it.category.lower()].id if it.category else None,
-            description=it.description, amount=money(it.amount))
+            description=it.description, amount=money(it.amount),
+            receipt_attachment_id=it.receipt_attachment_id)
         for i, it in enumerate(p.items)
     ]
+    # A receipt whose expense row was removed (or replaced) goes with it.
+    removed = old_receipts - {it.receipt_attachment_id for it in p.items if it.receipt_attachment_id}
+    if removed:
+        drop_attachments(db, removed)
     claim.taxes = [
         models.ExpenseClaimTax(id=uuid.uuid4(), claim_id=claim.id, sort_order=i, **t) for i, t in enumerate(totals.taxes)
     ]
@@ -565,6 +602,12 @@ def expense_report_out(
     company = db.get(models.Company, claim.company_id)
     project = db.get(models.Project, claim.project_id) if claim.project_id else None
     task = db.get(models.TaskBoardCard, claim.task_id) if claim.task_id else None
+    receipt_ids = [l.receipt_attachment_id for l in claim.lines if l.receipt_attachment_id]
+    receipts = {
+        a.id: schemas.AttachmentOut(id=a.id, file_name=a.file_name, file_url=a.file_url,
+                                    mime_type=a.mime_type, size_bytes=a.size_bytes)
+        for a in db.scalars(select(models.Attachment).where(models.Attachment.id.in_(receipt_ids)))
+    } if receipt_ids else {}
     advances = []
     for link in claim.advances:
         adv = db.get(models.EmployeeAdvance, link.advance_id)
@@ -577,7 +620,8 @@ def expense_report_out(
         status=claim.status,
         items=[schemas.ExpenseLineItemOut(
             expense_date=l.expense_date, category=l.category, description=l.description, amount=float(l.amount),
-            claim_type_id=l.claim_type_id) for l in claim.lines],
+            claim_type_id=l.claim_type_id, receipt=receipts.get(l.receipt_attachment_id))
+            for l in sorted(claim.lines, key=lambda l: l.sort_order or 0)],
         approver_id=claim.approver_id, approver_name=name(claim.approver_id), decision_notes=claim.decision_notes,
         decided_at=claim.decided_at,
         decided_by_manager_type=crud.decided_by_manager_type(employee, claim.approver_id),
@@ -608,21 +652,13 @@ SERIES_PREFIX = "HR-EXP"
 
 
 def next_claim_series(db: Session, company_id: uuid.UUID, on: datetime.date) -> str:
-    """Series 'HR-EXP-<year>-<5 digit number>' (the Expense Claim form's
-    Series field): the next free number for the year, allocated under a
-    company-wide lock so two claims saved at once never share one."""
-    db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"expense_series:{company_id}:{on.year}"))))
-    prefix = f"{SERIES_PREFIX}-{on.year}-"
-    taken = db.scalars(
-        select(models.ExpenseClaim.claim_no).where(
-            models.ExpenseClaim.company_id == company_id, models.ExpenseClaim.claim_no.like(f"{prefix}%"))
-    ).all()
-    highest = 0
-    for no in taken:
-        tail = no[len(prefix):]
-        if tail.isdigit():
-            highest = max(highest, int(tail))
-    return f"{prefix}{highest + 1:05d}"
+    """The next Expense ID (default 'HR-EXP-<year>-<5 digits>'), in the
+    company's configured format (Administration > General Settings >
+    Document ID Formats), allocated under a company-wide lock so two
+    reports saved at once never share one."""
+    from . import document_numbers
+
+    return document_numbers.next_ids(db, company_id, "expense_report", on=on)[0]
 
 
 def quick_net_total(p: schemas.ExpenseReportApiCreate) -> float:

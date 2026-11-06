@@ -1365,6 +1365,10 @@ class ExpenseClaimLine(Base):
     # category holds the Expense Claim Type's name; claim_type_id links the row.
     claim_type_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0)
+    # -- Manual addition, see backend/db/add_request_ids_and_expense_receipts.sql --
+    # The receipt / invoice of this one expense (a core_attachments row of
+    # the same claim).
+    receipt_attachment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
 
 class ExpenseClaimType(Base):
@@ -2851,6 +2855,11 @@ class TravelRequestModel(Base):
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("core_employees.id")
     )
+    # -- Manual addition, see backend/db/add_request_ids_and_expense_receipts.sql --
+    # The request's company and its unique ID ('HR-TR-<year>-NNNNN'), set
+    # automatically when the row is first saved (travel_expense.py).
+    company_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    request_no: Mapped[str | None] = mapped_column(String(30), nullable=True)
     purpose: Mapped[str | None] = mapped_column(String(200), nullable=True)
     destination: Mapped[str | None] = mapped_column(String(150), nullable=True)
     from_date: Mapped[datetime.date] = mapped_column(Date)

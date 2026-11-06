@@ -166,8 +166,8 @@ FIELDS: dict[str, FieldDef] = {f.key: f for f in (
 # (hcm_expense_claim_types, Travel & Expenses > Claim Types); the registry
 # lists them so the admin screen can point there.
 EXTERNALLY_MANAGED = {
-    "travel.expense_type": "Travel & Expenses > Claim Types",
-    "expense_claim.claim_type": "Travel & Expenses > Claim Types",
+    "travel.expense_type": "Travel & Expenses > Expense Categories",
+    "expense_claim.claim_type": "Travel & Expenses > Expense Categories",
 }
 
 CUSTOM_FIELD_TYPES = ("text", "textarea", "number", "date", "dropdown", "checkbox")

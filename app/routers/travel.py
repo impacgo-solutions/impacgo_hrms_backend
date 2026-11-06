@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -675,20 +675,35 @@ def update_expense_payment(
 def upload_expense_attachment(  # sync def -> threadpool (blocking file/DB I/O)
     claim_id: uuid.UUID,
     file: UploadFile = File(...),
+    # The expense row (0-based, in the report's order) this file is the
+    # receipt of; omitted = a general supporting document.
+    line_index: int | None = Form(default=None, ge=0),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     """Receipts / supporting documents. Owner only, while the claim can still be amended."""
-    claim = _load_claim(db, claim_id, current_user)
+    claim = _load_claim(db, claim_id, current_user, lock=line_index is not None)
     _require_owner(current_user, claim.employee_id, "expense report")
     if claim.status not in ("draft", "pending", "sent_back"):
         raise HTTPException(status_code=409, detail="Receipts can no longer be added to an expense report that has been decided.")
+    line = None
+    if line_index is not None:
+        line = next((l for l in claim.lines if (l.sort_order or 0) == line_index), None)
+        if line is None:
+            raise HTTPException(status_code=422, detail="That expense row no longer exists. Reopen the report and try again.")
     file_url, size_bytes = save_uploaded_file(file, entity_type=_EXPENSE_ENTITY, entity_id=claim.id)
     a = crud.create_attachment(
         db, company_id=claim.company_id, entity_type=_EXPENSE_ENTITY, entity_id=claim.id,
         file_name=file.filename or "file", file_url=file_url, mime_type=file.content_type, size_bytes=size_bytes,
     )
     a.uploaded_by = current_user.id
+    if line is not None:
+        # One receipt per expense: a new one replaces the previous file.
+        previous = line.receipt_attachment_id
+        line.receipt_attachment_id = a.id
+        db.flush()
+        if previous is not None and previous != a.id:
+            te.drop_attachments(db, [previous])
     crud.create_audit_log(db, claim.company_id, current_user.id, "attach", _EXPENSE_ENTITY, claim.id)
     db.commit()
     db.refresh(a)

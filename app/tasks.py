@@ -387,7 +387,7 @@ def _details(db: Session, task: models.TaskBoardCard, extra: dict[str, str] | No
     d = {
         "Task": task.title,
         "Task ID": task.code,
-        "Project": project.name if project else "—",
+        "Project": (f"{project.code} · {project.name}" if project and project.code else project.name) if project else "—",
         "Assigned To": assignee_names_text(db, task),
         "Assigned Date": crud._fmt_req_date(task.assigned_date),
         "Deadline": fmt_deadline(task.deadline_at),

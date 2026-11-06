@@ -63,7 +63,7 @@ class WorkEntryReportDetailsTests(_QABase):
 
     def test_task_and_description_complete(self):
         out = self.report()
-        self.assertEqual(out.columns, ["Employee", "Department", "Branch", "Date", "Project", "Task", "Description",
+        self.assertEqual(out.columns, ["Employee", "Department", "Branch", "Date", "Project ID", "Project", "Task", "Description",
                                        "Category", "Hours", "Billable", "Timesheet Status"])
         t, d = out.columns.index("Task"), out.columns.index("Description")
         by_task = {r[t]: r for r in out.rows}

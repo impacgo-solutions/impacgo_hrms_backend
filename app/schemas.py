@@ -3210,6 +3210,7 @@ class ProjectAllocationOut(BaseModel):
     employee_id: uuid.UUID
     employee_name: str
     project: str
+    project_code: str | None = None
     role: str | None
     allocation_pct: int
     is_billable: bool
@@ -3277,6 +3278,7 @@ class WorkEntryOut(BaseModel):
     employee_id: uuid.UUID
     entry_date: datetime.date
     project: str | None
+    project_code: str | None = None
     task: str | None
     task_id: uuid.UUID | None = None
     category: str | None
@@ -3699,6 +3701,7 @@ class TaskCardDetailOut(BaseModel):
     task_type: str
     project_id: uuid.UUID
     project_name: str
+    project_code: str | None = None
     assignee: str
     due_date: datetime.date | None
     planned_start_date: datetime.date | None
@@ -4018,6 +4021,8 @@ class TravelCostingOut(BaseModel):
 
 class TravelRequestOut(BaseModel):
     id: uuid.UUID
+    # The request's unique ID, e.g. HR-TR-2026-00001.
+    request_no: str | None = None
     employee_id: uuid.UUID
     purpose: str | None = None
     destination: str | None = None
@@ -4082,6 +4087,10 @@ class ExpenseLineItemCreate(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     # M-18: hcm_expense_claim_lines.amount is NUMERIC(14,2).
     amount: float = Field(gt=0, le=MAX_NUMERIC_14_2)
+    # This expense's receipt / invoice: an attachment already uploaded to
+    # this same expense report (kept when the report is edited). A new
+    # receipt is uploaded after saving, with the row's line_index.
+    receipt_attachment_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def _not_future(self):
@@ -4182,6 +4191,8 @@ class ExpenseLineItemOut(BaseModel):
     description: str | None
     amount: float
     claim_type_id: uuid.UUID | None = None
+    # The receipt / invoice uploaded for this one expense (None = none).
+    receipt: AttachmentOut | None = None
 
     model_config = {"from_attributes": True}
 
@@ -4283,7 +4294,7 @@ class ExpenseClaimTypeIn(BaseModel):
     def _name(cls, v: str) -> str:
         v = _clean(v)
         if not v:
-            raise ValueError("Expense Claim Type name is required")
+            raise ValueError("Expense Category name is required")
         return v
 
     @field_validator("description")
@@ -4304,7 +4315,7 @@ class ExpenseClaimTypeUpdate(BaseModel):
             return v
         v = _clean(v)
         if not v:
-            raise ValueError("Expense Claim Type name is required")
+            raise ValueError("Expense Category name is required")
         return v
 
     @field_validator("description")
@@ -4433,6 +4444,7 @@ class SprintOut(BaseModel):
     id: uuid.UUID
     name: str
     project: str
+    project_code: str | None = None
     start_date: datetime.date | None = None
     end_date: datetime.date | None = None
     status: str
@@ -4451,6 +4463,7 @@ class ReleaseOut(BaseModel):
     id: uuid.UUID
     name: str
     project: str
+    project_code: str | None = None
     target_date: datetime.date
     status: str
 
@@ -4607,6 +4620,59 @@ class EmployeeIdFormatUpdate(BaseModel):
     # 'auto' = generated from this format on Add Employee; 'manual' = typed
     # in by hand there (the format is then unused for that type).
     generation_mode: str | None = Field(default=None, pattern="^(auto|manual)$")
+
+
+class IdFormatOut(BaseModel):
+    """Administration > General Settings > Document ID Formats, one per
+    document type (project, travel_request, expense_report).
+    next_number is the lowest number the next record can get (the
+    "Starting Number"); next_code is the ID the next record would get now
+    (a preview -- nothing is reserved)."""
+
+    doctype: str
+    label: str
+    prefix: str
+    suffix: str
+    padding: int
+    include_year: bool
+    next_number: int
+    next_code: str
+
+
+class IdFormatUpdate(BaseModel):
+    prefix: str | None = Field(default=None, max_length=20)
+    suffix: str | None = Field(default=None, max_length=20)
+    padding: int | None = Field(default=None, ge=1, le=10)
+    next_number: int | None = Field(default=None, ge=1, le=999_999_999)
+    include_year: bool | None = None
+
+
+class IdPreviewOut(BaseModel):
+    doctype: str
+    next_code: str
+
+
+class ProjectIdFormatOut(BaseModel):
+    """Administration > General Settings > Project ID Format (core.
+    number_series, doctype 'project'). next_number is the number the next
+    project gets; next_code is that ID, formatted (a preview -- nothing is
+    reserved)."""
+
+    prefix: str
+    suffix: str
+    padding: int
+    next_number: int
+    next_code: str
+
+
+class ProjectIdFormatUpdate(BaseModel):
+    """next_number may be set lower than IDs already in use: those are
+    skipped, so it can never create a duplicate."""
+
+    prefix: str | None = Field(default=None, max_length=20)
+    suffix: str | None = Field(default=None, max_length=20)
+    padding: int | None = Field(default=None, ge=1, le=10)
+    next_number: int | None = Field(default=None, ge=1, le=999_999_999)
 
 
 class EmployeeIdFormatItem(BaseModel):

@@ -109,7 +109,7 @@ def create_expense_claim_type(
 ):
     te.ensure_default_claim_types(db, current_user.company_id)
     if _name_clash(db, current_user.company_id, payload.name):
-        raise HTTPException(status_code=409, detail=f"Expense Claim Type '{payload.name}' already exists")
+        raise HTTPException(status_code=409, detail=f"Expense Category '{payload.name}' already exists")
     row = models.ExpenseClaimType(
         id=uuid.uuid4(), company_id=current_user.company_id, name=payload.name, description=payload.description,
         is_active=payload.is_active, created_by=current_user.id)
@@ -123,7 +123,7 @@ def create_expense_claim_type(
 def _get_type(db: Session, company_id: uuid.UUID, type_id: uuid.UUID) -> models.ExpenseClaimType:
     row = db.get(models.ExpenseClaimType, type_id)
     if row is None or row.company_id != company_id:
-        raise HTTPException(status_code=404, detail="Expense Claim Type not found")
+        raise HTTPException(status_code=404, detail="Expense Category not found")
     return row
 
 
@@ -138,7 +138,7 @@ def update_expense_claim_type(
     changes = payload.model_dump(exclude_unset=True)
     if changes.get("name") and changes["name"].lower() != row.name.lower():
         if _name_clash(db, current_user.company_id, changes["name"], exclude=row.id):
-            raise HTTPException(status_code=409, detail=f"Expense Claim Type '{changes['name']}' already exists")
+            raise HTTPException(status_code=409, detail=f"Expense Category '{changes['name']}' already exists")
         # Rows already filed keep their stored name; follow the rename so the
         # history, reports and the dropdown stay one consistent label.
         old = row.name

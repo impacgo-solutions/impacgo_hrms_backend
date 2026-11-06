@@ -17,6 +17,7 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session, aliased, joinedload, load_only, selectinload, sessionmaker
 
 from . import database, email_service, models, notification_settings, schemas, security, ws_manager
+from . import request_numbers  # noqa: F401 -- numbers new travel requests on save
 from .config import settings
 from .designation_seed_data import BAND_NUMBERS, DESIGNATION_BANDS, SEED_TITLE_ORDER
 from .rbac_columns import BUILTIN_ROLES, COLUMN_LABELS, COLUMN_MODULES
@@ -3995,6 +3996,55 @@ def update_employee_id_format(
     return series
 
 
+# ── Project ID (Administration > General Settings > Project ID Format) ─────
+# The same core_number_series mechanism as Employee ID: one row per company
+# (doctype 'project'), created with a default format on first use, and a
+# company-wide lock so two projects created at once never share an ID.
+
+PROJECT_SERIES_DOCTYPE = "project"
+
+
+def _project_code_taken(db: Session, company_id: uuid.UUID, code: str) -> bool:
+    from . import document_numbers
+
+    return document_numbers.is_taken(db, company_id, "project", code)
+
+
+def get_or_create_project_number_series(db: Session, company_id: uuid.UUID) -> models.NumberSeries:
+    from . import document_numbers
+
+    return document_numbers.get_series(db, company_id, "project")
+
+
+def preview_next_project_code(db: Session, company_id: uuid.UUID, series: models.NumberSeries | None = None) -> str:
+    """The ID the next project will get; a preview only."""
+    from . import document_numbers
+
+    return document_numbers.preview(db, company_id, "project")
+
+
+def generate_project_code(db: Session, company_id: uuid.UUID) -> str:
+    """The next Project ID in the company's configured format
+    (document_numbers): never handed out twice."""
+    from . import document_numbers
+
+    return document_numbers.next_ids(db, company_id, "project")[0]
+
+
+def update_project_id_format(
+    db: Session,
+    company_id: uuid.UUID,
+    prefix: str | None = None,
+    suffix: str | None = None,
+    padding: int | None = None,
+    next_number: int | None = None,
+) -> models.NumberSeries:
+    from . import document_numbers
+
+    return document_numbers.update_format(db, company_id, "project", prefix=prefix, suffix=suffix,
+                                          padding=padding, next_number=next_number)
+
+
 def create_employee(
     db: Session, company_id: uuid.UUID, payload
 ) -> models.Employee:
@@ -7674,6 +7724,7 @@ def _request_entity_details(db: Session, entity_type: str, entity_id: uuid.UUID)
         }
     if entity_type == "travel_request":
         return {
+            "Request ID": row.request_no or "—",
             "Purpose": row.purpose or "—",
             "Destination": row.destination or "—",
             "From Date": _fmt_req_date(row.from_date),
@@ -7683,7 +7734,7 @@ def _request_entity_details(db: Session, entity_type: str, entity_id: uuid.UUID)
         }
     if entity_type in ("expense_report", "reimbursement"):
         details = {
-            "Claim No": row.claim_no,
+            "Expense ID": row.claim_no,
             "Claim Date": _fmt_req_date(row.claim_date),
             "Purpose": row.purpose or "—",
             "Total Amount": format_inr_budget(row.total_amount),
@@ -7842,12 +7893,15 @@ def notify_new_request(
     leave = _leave_email_fields(db, entity_type, entity_id)
     event_key = _notify_event_key(entity_type, decision=False)
     email_on = event_key is None or notification_settings.channel_enabled(db, company_id, event_key, "email")
+    ref = request_reference(db, entity_type, entity_id)
+    if ref:
+        body = body.replace(f"a {request_type_label.lower()}", f"a {request_type_label.lower()} ({ref})", 1)
     for manager_employee_id in manager_ids:
         create_notification(
             db,
             company_id,
             get_user_id_for_employee(db, manager_employee_id),
-            title=f"New {request_type_label} from {requester_name}",
+            title=f"New {request_type_label} {ref} from {requester_name}" if ref else f"New {request_type_label} from {requester_name}",
             body=body,
             entity_type=entity_type,
             entity_id=entity_id,
@@ -7929,6 +7983,21 @@ def _leave_email_fields(db: Session, entity_type: str, entity_id: uuid.UUID) -> 
 _STATUS_VERB = {"approved": "approved", "rejected": "rejected", "sent_back": "sent back for revision"}
 
 
+def request_reference(db: Session, entity_type: str, entity_id: uuid.UUID) -> str | None:
+    """The ID people see for a request (HR-TR-..., HR-EXP-...), for
+    notification titles and emails; None for request types without one."""
+    try:
+        if entity_type == "travel_request":
+            row = db.get(models.TravelRequestModel, entity_id)
+            return row.request_no if row is not None else None
+        if entity_type in ("expense_report", "expense_claim", "reimbursement"):
+            row = db.get(models.ExpenseClaim, entity_id)
+            return row.claim_no if row is not None else None
+    except Exception:  # pragma: no cover - a missing ID never blocks a notification
+        return None
+    return None
+
+
 def notify_decision(
     db: Session,
     company_id: uuid.UUID,
@@ -7946,7 +8015,8 @@ def notify_decision(
     manager explicitly."""
     requester_user_id = get_user_id_for_employee(db, requester_employee_id)
     verb = _STATUS_VERB.get(status, status)
-    body = f"Your {request_type_label.lower()} was {verb}."
+    ref = request_reference(db, entity_type, entity_id)
+    body = f"Your {request_type_label.lower()}{f' {ref}' if ref else ''} was {verb}."
     if decision_notes:
         body += f' Comments: "{decision_notes}"'
     event_key = _notify_event_key(entity_type, decision=True)
@@ -7954,7 +8024,7 @@ def notify_decision(
         db,
         company_id,
         requester_user_id,
-        title=f"{request_type_label} {verb}",
+        title=f"{request_type_label} {ref} {verb}" if ref else f"{request_type_label} {verb}",
         body=body,
         entity_type=entity_type,
         entity_id=entity_id,
@@ -8008,7 +8078,7 @@ def notify_decision(
         return
     email_service.send_request_email(
         requester.work_email,
-        subject=f"Your {request_type_label} has been {verb}",
+        subject=f"Your {request_type_label}{f' {ref}' if ref else ''} has been {verb}",
         heading=f"{_request_heading_label(request_type_label)} Notification",
         intro_line=f"{approver_name} has {verb} your {request_type_label}.",
         details=decision_fields,
@@ -9056,7 +9126,7 @@ def _reimbursement_source_amount(source_type: str, row) -> float:
 def _reimbursement_reference(source_type: str, row) -> str:
     """The request/report number shown on the payroll screens and payslip."""
     if source_type == "travel_request":
-        return f"TRV-{row.id.hex[:8].upper()}"
+        return getattr(row, "request_no", None) or f"TRV-{row.id.hex[:8].upper()}"
     return row.claim_no or f"EXP-{row.id.hex[:8].upper()}"
 
 
@@ -9416,7 +9486,7 @@ def list_payroll_reimbursement_items(db: Session, company_id: uuid.UUID) -> list
             "source_id": travel.id,
             "employee_id": travel.employee_id,
             "employee_name": _full_name(employee),
-            "request_code": f"TRV-{travel.id.hex[:8].upper()}",
+            "request_code": travel.request_no or f"TRV-{travel.id.hex[:8].upper()}",
             "type_label": _reimbursement_type_label("travel_request"),
             "approved_amount": float(travel.estimated_cost or 0),
             "approval_date": travel.decided_at,
@@ -12447,14 +12517,10 @@ def create_project(
     if existing is not None:
         raise ValueError(f"Project '{name}' already exists")
     if not code:
-        code = re.sub(r"[^A-Z0-9]", "", name.upper())[:10] or "PRJ"
-        # Two names sharing their first 10 letters/digits must not collide
-        # on UNIQUE(company_id, code) -- add a numeric suffix.
-        base_code, n = code, 1
-        while db.scalar(select(models.Project.id).where(
-                models.Project.company_id == company_id, models.Project.code == code).limit(1)) is not None:
-            n += 1
-            code = f"{base_code[:10 - len(str(n))]}{n}"
+        # Project ID from the company's configured format (General Settings).
+        code = generate_project_code(db, company_id)
+    elif _project_code_taken(db, company_id, code):
+        raise ValueError(f"Project ID '{code}' already exists")
     project = models.Project(
         id=uuid.uuid4(),
         company_id=company_id,
@@ -13909,6 +13975,7 @@ def get_task_board_card_detail(
         "task_type": card.task_type,
         "project_id": card.project_id,
         "project_name": project.name if project else "—",
+        "project_code": project.code if project else None,
         "assignee": "Unassigned",
         "tag": card.tag,
         "story_points": card.story_points,
@@ -14066,7 +14133,10 @@ def create_expense_report(
     if existing is not None:
         existing.idempotent_replay = True
         return existing
-    claim_no = expense_claims.generate_claim_no(db, company_id, "EXP", submitted_date)
+    from . import travel_expense
+
+    # Sequential, like every Expense Report filed from Travel & Expenses.
+    claim_no = travel_expense.next_claim_series(db, company_id, submitted_date)
     claim = models.ExpenseClaim(
         id=uuid.uuid4(),
         company_id=company_id,
@@ -15589,6 +15659,7 @@ def get_employee_projects(db: Session, employee_id: uuid.UUID, company_id: uuid.
         # row is the same employee)
         result.append({
             "name": proj.name,
+            "code": proj.code,
             "role": pa.project_role.name if pa.project_role else "—",
             "allocation": pa.allocation_pct,
             "billable": proj.is_billable,

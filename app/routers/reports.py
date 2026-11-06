@@ -411,6 +411,7 @@ def timesheet_report(
             models.Employee.last_name,
             models.Branch.name.label("branch_name"),
             models.Project.name.label("project_name"),
+            models.Project.code.label("project_code"),
             billable_sum,
             non_billable_sum,
             total_sum,
@@ -434,6 +435,7 @@ def timesheet_report(
             models.Employee.last_name,
             models.Branch.name,
             models.Project.name,
+            models.Project.code,
         )
         .order_by(models.Employee.first_name, models.Project.name)
     )
@@ -447,7 +449,7 @@ def timesheet_report(
     with_hours = {r.id for r in rows_raw if r.project_name is not None}
     rows_raw = [r for r in rows_raw if r.project_name is not None or r.id not in with_hours]
 
-    columns = ["Employee", "Branch", "Project", "Billable Hrs", "Non-Billable Hrs", "Total Hrs"]
+    columns = ["Employee", "Branch", "Project ID", "Project", "Billable Hrs", "Non-Billable Hrs", "Total Hrs"]
     # Pay data: only for org-wide payroll access (same gate as the payroll report).
     show_cost = payroll_scope == "org"
     rates = _hourly_rates(db, [r.id for r in rows_raw]) if show_cost else {}
@@ -467,6 +469,7 @@ def timesheet_report(
         row = [
             full_name,
             r.branch_name or "—",
+            (r.project_code or "—") if r.project_name else "—",
             r.project_name or "—",
             f"{b:.1f}",
             f"{nb:.1f}",
@@ -671,7 +674,7 @@ def project_report(
             report_type="project",
             from_date=str(from_date),
             to_date=str(to_date),
-            columns=["Project", "Client", "Status", "PM", "Budget", "Logged Hrs", "Progress %", "Start", "End"],
+            columns=["Project ID", "Project", "Client", "Status", "PM", "Budget", "Logged Hrs", "Progress %", "Start", "End"],
             rows=[],
             summary={"Total Projects": "0", "Active": "0", "Avg Progress %": "0.0"},
         )
@@ -694,7 +697,7 @@ def project_report(
         for row in db.execute(hours_stmt).all()
     }
 
-    columns = ["Project", "Client", "Status", "PM", "Budget", "Logged Hrs", "Progress %", "Start", "End"]
+    columns = ["Project ID", "Project", "Client", "Status", "PM", "Budget", "Logged Hrs", "Progress %", "Start", "End"]
     rows: list[list[str]] = []
     total_progress = 0
     active_count = 0
@@ -718,6 +721,7 @@ def project_report(
         if p.status == "active":
             active_count += 1
         rows.append([
+            p.code or "—",
             p.name,
             p.customer.name if p.customer else "—",
             p.status,
@@ -1449,6 +1453,7 @@ def work_entry_report(
                 models.Branch.name.label("branch_name"),
                 models.Department.name.label("dept_name"),
                 models.Project.name.label("project_name"),
+                models.Project.code.label("project_code"),
                 models.Timesheet.status.label("timesheet_status"),
                 # A task-board card linked to the entry (its title is the
                 # task name when the entry has no typed task name).
@@ -1482,7 +1487,7 @@ def work_entry_report(
 
     # Task / Description: the entry's full task name and description, never
     # shortened (the screen wraps them; CSV / PDF export carry them whole).
-    columns = ["Employee", "Department", "Branch", "Date", "Project", "Task", "Description", "Category",
+    columns = ["Employee", "Department", "Branch", "Date", "Project ID", "Project", "Task", "Description", "Category",
                "Hours", "Billable", "Timesheet Status"]
     rows: list[list[str]] = []
     category_hours: dict[str, float] = {}
@@ -1511,7 +1516,7 @@ def work_entry_report(
         description = (we.description or "").strip() or "—"
         rows.append([
             full_name, dept_name, r.branch_name or "—", we.entry_date.isoformat(),
-            r.project_name or "—", task, description, category, f"{hours:.1f}",
+            r.project_code or "—", r.project_name or "—", task, description, category, f"{hours:.1f}",
             "Yes" if we.is_billable else "No", r.timesheet_status.replace("_", " ").title(),
         ])
 

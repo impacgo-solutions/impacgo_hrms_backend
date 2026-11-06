@@ -1,9 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from .. import crud, employee_validation, models, schemas, weekly_off
+from .. import crud, document_numbers, employee_validation, models, schemas, weekly_off
 from ..database import get_db
-from ..deps import get_current_user, require_people_access, require_permission
+from ..deps import (
+    get_current_user,
+    require_people_access,
+    require_permission,
+    require_permission_or_action,
+)
 
 router = APIRouter(prefix="/api", tags=["settings"])
 
@@ -157,6 +162,118 @@ def update_employee_id_format(
         next_code=crud.preview_next_employee_code(series, db, current_user.company_id),
         generation_mode=series.generation_mode or "auto",
     )
+
+
+def _id_format_out(db: Session, company_id, key: str) -> schemas.IdFormatOut:
+    d = document_numbers.doctype(key)
+    series = document_numbers.get_series(db, company_id, key)
+    return schemas.IdFormatOut(
+        doctype=key, label=d.label, prefix=series.prefix, suffix=series.suffix, padding=series.padding,
+        include_year=bool(series.fiscal_infix), next_number=series.current_no + 1,
+        next_code=document_numbers.preview(db, company_id, key),
+    )
+
+
+@router.get("/settings/id-formats", response_model=list[schemas.IdFormatOut])
+def list_id_formats(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("system_settings_rbac")),
+):
+    """Administration > General Settings > Document ID Formats."""
+    out = [_id_format_out(db, current_user.company_id, key) for key in document_numbers.DOCTYPES]
+    db.commit()  # persists default rows created on first use
+    return out
+
+
+@router.get("/settings/id-formats/{doctype}/preview", response_model=schemas.IdPreviewOut)
+def preview_id(
+    doctype: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """The ID the next record would get -- shown on the "new" forms. A
+    preview only: nothing is reserved."""
+    if doctype not in document_numbers.DOCTYPES:
+        raise HTTPException(status_code=404, detail="Unknown document type")
+    code = document_numbers.preview(db, current_user.company_id, doctype)
+    db.commit()
+    return schemas.IdPreviewOut(doctype=doctype, next_code=code)
+
+
+@router.patch("/settings/id-formats/{doctype}", response_model=schemas.IdFormatOut)
+def update_id_format(
+    doctype: str,
+    payload: schemas.IdFormatUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("system_settings_rbac")),
+):
+    if doctype not in document_numbers.DOCTYPES:
+        raise HTTPException(status_code=404, detail="Unknown document type")
+    prefix = payload.prefix.strip() if payload.prefix is not None else None
+    suffix = payload.suffix.strip() if payload.suffix is not None else None
+    series = document_numbers.update_format(
+        db, current_user.company_id, doctype, prefix=prefix, suffix=suffix, padding=payload.padding,
+        next_number=payload.next_number, include_year=payload.include_year)
+    if not series.prefix and not series.suffix and not series.fiscal_infix and series.padding < 3:
+        raise HTTPException(status_code=422, detail="Add a prefix or suffix, or use at least 3 digits.")
+    year = "2026-" if series.fiscal_infix else ""
+    if len(f"{series.prefix}{year}{'9' * series.padding}{series.suffix}") > 30:
+        raise HTTPException(status_code=422, detail="The ID would be longer than 30 characters.")
+    crud.create_audit_log(db, current_user.company_id, current_user.id, "update", f"id_format:{doctype}", series.id)
+    db.commit()
+    return _id_format_out(db, current_user.company_id, doctype)
+
+
+def _project_id_format_out(db: Session, company_id, series: models.NumberSeries) -> schemas.ProjectIdFormatOut:
+    return schemas.ProjectIdFormatOut(
+        prefix=series.prefix, suffix=series.suffix, padding=series.padding,
+        next_number=series.current_no + 1,
+        next_code=crud.preview_next_project_code(db, company_id, series),
+    )
+
+
+@router.get("/settings/project-id-format", response_model=schemas.ProjectIdFormatOut)
+def get_project_id_format(
+    db: Session = Depends(get_db),
+    # Whoever can create a project sees the next Project ID (Add Project).
+    current_user: models.User = Depends(require_permission_or_action("projects_access", "projects", "edit")),
+):
+    series = crud.get_or_create_project_number_series(db, current_user.company_id)
+    db.commit()  # persists the default row on first use
+    return _project_id_format_out(db, current_user.company_id, series)
+
+
+@router.get("/settings/project-id-format/admin", response_model=schemas.ProjectIdFormatOut)
+def get_project_id_format_admin(
+    db: Session = Depends(get_db),
+    # The General Settings card (settings admins, who may not manage projects).
+    current_user: models.User = Depends(require_permission("system_settings_rbac")),
+):
+    series = crud.get_or_create_project_number_series(db, current_user.company_id)
+    db.commit()
+    return _project_id_format_out(db, current_user.company_id, series)
+
+
+@router.patch("/settings/project-id-format", response_model=schemas.ProjectIdFormatOut)
+def update_project_id_format(
+    payload: schemas.ProjectIdFormatUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("system_settings_rbac")),
+):
+    prefix = payload.prefix.strip() if payload.prefix is not None else None
+    suffix = payload.suffix.strip() if payload.suffix is not None else None
+    if prefix is not None and suffix is not None and not prefix and not suffix and (payload.padding or 1) < 3:
+        raise HTTPException(status_code=422, detail="Add a prefix or suffix, or use at least 3 digits.")
+    series = crud.update_project_id_format(
+        db, current_user.company_id, prefix=prefix, suffix=suffix,
+        padding=payload.padding, next_number=payload.next_number,
+    )
+    sample = f"{series.prefix}{'9' * series.padding}{series.suffix}"
+    if len(sample) > 30:
+        raise HTTPException(status_code=422, detail="The Project ID would be longer than 30 characters.")
+    crud.create_audit_log(db, current_user.company_id, current_user.id, "update", "project_id_format", series.id)
+    db.commit()
+    return _project_id_format_out(db, current_user.company_id, series)
 
 
 @router.get("/settings/employee-id-availability", response_model=schemas.EmployeeIdAvailabilityOut)
