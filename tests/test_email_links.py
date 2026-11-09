@@ -74,9 +74,18 @@ class EmailLinkTests(unittest.TestCase):
                     entity_type=entity_type, entity_id=rid, cta_label=cta, email_type=kind)
                 self.assertEqual(len(self.jobs), 1, entity_type)
                 self.assert_job_links(self.jobs[0], entity_type)
-                # the deep link opens the right module and record
-                self.assertIn(f'href="{BASE}/#/{view}/{rid}"', self.jobs[0].html_body, entity_type)
-                self.assertIn(f"{BASE}/#/{view}/{rid}", self.jobs[0].text_body, entity_type)
+                # the deep link opens the right module, record and record kind
+                link = f"{BASE}/#/{view}/{rid}?type={entity_type}"
+                self.assertIn(f'href="{link}"', self.jobs[0].html_body, entity_type)
+                self.assertIn(link, self.jobs[0].text_body, entity_type)
+
+    def test_attendance_emails_open_attendance_not_the_approvals_inbox(self):
+        for entity_type in ("compliance_exception", "shift_reminder", "regularization", "overtime_request"):
+            self.assertEqual(es._deep_link(entity_type, "1"), f"{BASE}/#/attendance/1?type={entity_type}")
+
+    def test_link_without_a_record_has_no_type(self):
+        self.assertEqual(es._deep_link("holiday"), f"{BASE}/#/leave")
+        self.assertEqual(es._deep_link("leave_request", None), f"{BASE}/#/leave")
 
     def test_unknown_entity_type_falls_back_to_the_approvals_inbox(self):
         es.send_request_email("a@impacgo.com", subject="s", heading="h", intro_line="i", details={},

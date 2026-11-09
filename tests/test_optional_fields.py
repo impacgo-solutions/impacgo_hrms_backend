@@ -106,10 +106,11 @@ class OtherEntitiesOptional(_QABase):
 
     def test_asset_with_tag_and_type_only(self):
         tag = "OPT-" + uuid.uuid4().hex[:8]
-        r = self.client.post("/api/asset-inventory", json={"tag": tag, "type": "Laptop", "model": "", "value": "",
-                                                           "purchased": None, "status": None})
+        r = self.client.post("/api/asset-inventory", json={"tag": tag, "type": "Laptop", "category": "office",
+                                                           "model": "", "value": "", "purchased": None, "status": None})
         self.assertEqual(r.status_code, 201, r.text)
         self.assertEqual((r.json()["value"], r.json()["purchased"]), ("—", "—"))
+        self.assertEqual((r.json()["category"], r.json()["category_key"]), ("Office", "office"))
         e = self.new_employee()
         a = self.client.post("/api/asset-assignments", json={"asset_tag": tag, "employee_id": str(e.id)})
         self.assertEqual(a.status_code, 201, a.text)
@@ -117,7 +118,73 @@ class OtherEntitiesOptional(_QABase):
         ret = self.client.patch(f"/api/asset-assignments/{a.json()['id']}/return", json={})
         self.assertEqual(ret.status_code, 200, ret.text)
         self.assertEqual(self.client.post("/api/asset-inventory", json={"tag": "OPT-" + uuid.uuid4().hex[:8],
-                                                                        "type": "Laptop", "value": "-5"}).status_code, 422)
+                                                                        "type": "Laptop", "category": "office",
+                                                                        "value": "-5"}).status_code, 422)
+
+    def test_asset_category_optional_single_choice(self):
+        def post(**extra):
+            return self.client.post("/api/asset-inventory",
+                                    json={"tag": "CAT-" + uuid.uuid4().hex[:8], "type": "Laptop", **extra})
+        for missing in (post(), post(category=""), post(category=None)):  # optional now
+            self.assertEqual(missing.status_code, 201, missing.text)
+            self.assertEqual((missing.json()["category"], missing.json()["category_key"]), ("—", None))
+        self.assertEqual(post(category="Vendor").status_code, 422)      # a given one must be an option
+        self.assertEqual(post(category=["office", "client"]).status_code, 422)  # only one allowed
+        for sent, label, key in (("personal", "Personal", "personal"), ("Office", "Office", "office"),
+                                 ("CLIENT", "Client", "client")):
+            r = post(category=sent)
+            self.assertEqual(r.status_code, 201, r.text)
+            self.assertEqual((r.json()["category"], r.json()["category_key"]), (label, key))
+            row = crud.get_asset_inventory_item_by_tag(self.db, self.company_id, r.json()["tag"])
+            self.assertEqual(row.asset_category, key)                    # stored
+            listed = next(a for a in self.client.get("/api/asset-inventory?limit=500").json()
+                          if a["tag"] == r.json()["tag"])
+            self.assertEqual(listed["category"], label)                 # listing
+
+    def test_asset_with_no_fields_at_all(self):
+        r = self.client.post("/api/asset-inventory", json={})
+        self.assertEqual(r.status_code, 201, r.text)
+        b = r.json()
+        self.assertTrue(b["tag"])                                       # generated from the Asset ID format
+        self.assertEqual((b["type"], b["category_key"], b["status_key"], b["name"], b["serial_number"],
+                          b["description"], b["value"], b["purchased"]),
+                         ("", None, "available", None, None, None, "—", "—"))
+        listed = next(a for a in self.client.get("/api/asset-inventory?limit=500").json() if a["tag"] == b["tag"])
+        self.assertEqual(listed["type"], "")
+
+    def test_asset_name_serial_description_stored_listed_and_edited(self):
+        r = self.client.post("/api/asset-inventory", json={
+            "type": "Laptop", "name": "  Design   laptop ", "serial_number": " C02XG0FDH7JY ",
+            "description": "Line one\n  Line two  \n"})
+        self.assertEqual(r.status_code, 201, r.text)
+        b = r.json()
+        self.assertEqual((b["name"], b["serial_number"], b["description"]),
+                         ("Design laptop", "C02XG0FDH7JY", "Line one\n  Line two"))
+        row = crud.get_asset_inventory_item_by_tag(self.db, self.company_id, b["tag"])
+        self.assertEqual((row.asset_name, row.serial_number, row.description),
+                         ("Design laptop", "C02XG0FDH7JY", "Line one\n  Line two"))
+        self.assertEqual(self.client.post("/api/asset-inventory", json={"name": "x" * 201}).status_code, 422)
+        # edit: only the fields sent change; blank clears; nothing required
+        e = self.client.patch(f"/api/asset-inventory/{b['id']}", json={"name": "Renamed", "serial_number": ""})
+        self.assertEqual(e.status_code, 200, e.text)
+        self.assertEqual((e.json()["name"], e.json()["serial_number"], e.json()["description"], e.json()["type"]),
+                         ("Renamed", None, "Line one\n  Line two", "Laptop"))
+        e2 = self.client.patch(f"/api/asset-inventory/{b['id']}",
+                               json={"type": "", "category": "client", "value": "45000", "purchased": "2025-01-01"})
+        self.assertEqual(e2.status_code, 200, e2.text)
+        self.assertEqual((e2.json()["type"], e2.json()["category_key"], e2.json()["purchased"]),
+                         ("", "client", "2025-01-01"))
+        self.assertEqual(self.client.patch(f"/api/asset-inventory/{b['id']}", json={"value": "-3"}).status_code, 422)
+        self.assertEqual(self.client.patch(f"/api/asset-inventory/{b['id']}", json={"category": "Vendor"}).status_code, 422)
+        self.assertEqual(self.client.patch(f"/api/asset-inventory/{b['id']}", json={}).status_code, 200)
+        self.assertEqual(self.client.patch(f"/api/asset-inventory/{uuid.uuid4()}", json={"name": "x"}).status_code, 404)
+        self.assertEqual(crud.get_asset_inventory_item_by_tag(self.db, self.company_id, b["tag"]).asset_tag, b["tag"])
+
+    def test_asset_request_without_type(self):
+        e = self.new_employee()
+        r = self.client.post("/api/asset-requests", json={"employee_id": str(e.id)})
+        self.assertEqual(r.status_code, 201, r.text)
+        self.assertEqual(r.json()["asset_type"], "")
 
     def test_simple_masters_with_only_their_name(self):
         suffix = uuid.uuid4().hex[:6]

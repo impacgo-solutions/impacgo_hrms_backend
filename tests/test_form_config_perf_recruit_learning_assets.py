@@ -76,17 +76,24 @@ class FormConfigPerfRecruitLearningAssetsTests(unittest.TestCase):
             fn(*a, **k)
         return ctx.exception.status_code
 
-    def custom_suite(self, form, create, read_all, entity_id_of):
+    def custom_suite(self, form, create, read_all, entity_id_of, required_enforced=True):
         """Shared checks of a form's custom fields: required / type errors,
-        persistence, list read-back, hidden field, tenant scoping."""
+        persistence, list read-back, hidden field, tenant scoping.
+        [required_enforced] False: a form where every field is optional
+        (Assets) -- a missing required custom field doesn't block."""
         note = self.make_field(form, "Ref Note", "text", is_required=True)
         self.make_field(form, "Budget", "number")
         self.make_field(form, "Due On", "date")
         self.make_field(form, "Tier", "dropdown", options=["Gold", "Silver"])
         self.make_field(form, "Urgent", "checkbox")
         self.make_field(form, "Remarks", "textarea")
-        # required missing -> 422; wrong types -> 422; unknown key -> 422
-        self.assertEqual(self.code(create, {}), 422)
+        # required missing -> 422 (unless the form has no required fields);
+        # wrong types -> 422; unknown key -> 422
+        if required_enforced:
+            self.assertEqual(self.code(create, {}), 422)
+        else:
+            self.assertNotIn("ref_note", create({})["custom_fields"])
+            self.assertNotIn("ref_note", create({"ref_note": "  "})["custom_fields"])
         self.assertEqual(self.code(create, {"ref_note": "x", "budget": "abc"}), 422)
         self.assertEqual(self.code(create, {"ref_note": "x", "due_on": "31/12/2026"}), 422)
         self.assertEqual(self.code(create, {"ref_note": "x", "tier": "Bronze"}), 422)
@@ -213,7 +220,7 @@ class FormConfigPerfRecruitLearningAssetsTests(unittest.TestCase):
         self.n += 1
         out = assets_api.create_asset_inventory_item(
             schemas.AssetInventoryItemCreate(
-                tag=f"T-{uuid.uuid4().hex[:8]}", type=atype, model="M1", status=status, value="45000",
+                tag=f"T-{uuid.uuid4().hex[:8]}", type=atype, category="office", model="M1", status=status, value="45000",
                 purchased="2025-01-01", custom_fields=custom),
             db=self.db, current_user=self.admin)
         return out.model_dump()
@@ -270,7 +277,8 @@ class FormConfigPerfRecruitLearningAssetsTests(unittest.TestCase):
 
     def test_asset_custom_fields(self):
         created = self.custom_suite(
-            "asset", lambda c: self.asset_create("Laptop", "available", c), self.asset_list, lambda r: r["id"])
+            "asset", lambda c: self.asset_create("Laptop", "available", c), self.asset_list, lambda r: r["id"],
+            required_enforced=False)
         # status PATCH response keeps the values; delete removes them
         out = assets_api.update_asset_inventory_status(
             created["id"], schemas.AssetInventoryItemStatusUpdate(status="Assigned"),

@@ -35,7 +35,7 @@ from sqlalchemy.orm import Session
 
 from . import template_rendering as tr
 
-DOC_TYPES = ("offer", "intern_offer", "nda", "agreement")
+DOC_TYPES = ("offer", "intern_offer", "appointment", "nda", "agreement")
 
 _COMMON = """
 .doc { color: #1f2937; }
@@ -318,6 +318,74 @@ INTERN_OFFER_LAYOUT = (
 )
 
 
+APPOINTMENT_LAYOUT = (
+    '<div class="doc {{logo_state}}">'
+    + letterhead("{{company_cin}}", "{{company_address}}")
+    + '<h1 class="doc-title">Letter of Appointment</h1>'
+    '<div class="doc-meta"><span>{{letter_date}}</span><span>Ref. No.: {{letter_number}}</span></div>'
+    '<div class="doc-to"><p><span class="k">{{employee_salutation}} {{employee_name}}</span></p>'
+    '<p>Employee ID: {{employee_id}}</p><p>{{employee_address}}</p></div>'
+    '<div class="doc-body">'
+    '<p>Dear {{employee_first_name}},</p>'
+    '<p>With reference to your application and the subsequent discussions, we are pleased to appoint you as '
+    '<strong>{{designation}}</strong> in the <strong>{{department}}</strong> department of {{company_name}}, '
+    'with effect from <strong>{{date_of_joining_long}}</strong>, on the following terms and conditions.</p>'
+    '<table class="terms">'
+    '<tr><td class="k">Designation</td><td>{{designation}}</td></tr>'
+    '<tr><td class="k">Department</td><td>{{department}}</td></tr>'
+    '<tr><td class="k">Employment Type</td><td>{{employment_type}}</td></tr>'
+    '<tr><td class="k">Date of Joining</td><td>{{date_of_joining_long}}</td></tr>'
+    '<tr><td class="k">Work Location</td><td>{{work_location}}</td></tr>'
+    '<tr><td class="k">Work Mode</td><td>{{work_mode}}</td></tr>'
+    '<tr><td class="k">Reporting Manager</td><td>{{reporting_manager}}</td></tr>'
+    '<tr><td class="k">Probation Period</td><td>{{probation_period}}</td></tr>'
+    '</table>'
+    '<h2>1. Remuneration</h2>'
+    '<p>Your annual cost to company (CTC) will be <strong>{{annual_ctc}}</strong> ({{annual_ctc_words}}), '
+    'i.e. {{monthly_ctc}} per month, structured as below and subject to applicable statutory deductions.</p>'
+    '{{salary_breakdown}}'
+    '<h2>2. Probation and Confirmation</h2>'
+    '<p>You will be on probation for {{probation_period}} from your date of joining. On satisfactory completion, '
+    'your services will be confirmed in writing. The company may extend the probation period if required.</p>'
+    '<h2>3. Working Hours and Leave</h2>'
+    '<p>You will follow the working hours, attendance and leave policies of the company as applicable to your '
+    'role and location, as amended from time to time.</p>'
+    '<h2>4. Confidentiality</h2>'
+    '<p>You will keep all information about the company, its clients and employees strictly confidential during '
+    'and after your employment, and will not use it for any purpose other than your duties.</p>'
+    '<h2>5. Notice Period</h2>'
+    '<p>After confirmation, either party may terminate this employment by giving notice as per company policy, '
+    'or salary in lieu of notice. During probation, the notice period is as per company policy.</p>'
+    '<h2>6. General</h2>'
+    '<p>This appointment is subject to the verification of your documents and references, and to the policies '
+    'and rules of {{company_name}} in force from time to time.</p>'
+    '<p>Please sign and return the duplicate copy of this letter as a token of your acceptance. We welcome you to '
+    '{{company_name}} and wish you a rewarding career with us.</p>'
+    '</div>'
+    '<div class="doc-sign"><p>Yours sincerely,</p><p>For <strong>{{company_legal_name}}</strong></p>'
+    '<div class="sign-area"><img class="sign-img" src="{{authorized_signature}}" alt="" />'
+    '<img class="seal-img" src="{{company_seal}}" alt="" /></div>'
+    '<p><strong>{{authorized_signatory}}</strong></p><p class="muted">{{authorized_signatory_designation}}</p></div>'
+    '<div class="doc-accept"><strong>Acceptance</strong><br />I, {{employee_name}}, have read and understood the '
+    'terms of this appointment and accept them.<div class="row"><div>Signature: ____________________</div>'
+    '<div>Date: ____________________</div></div></div>'
+    '<footer class="doc-foot">{{company_legal_name}} &middot; {{company_address}}</footer>'
+    '</div>'
+)
+
+# Signature / seal images in the appointment letter's signature block (the
+# shared themes have no rules for them).
+APPOINTMENT_EXTRA_CSS = """
+.sign-area { position: relative; height: 64px; margin: 4px 0; }
+.sign-img { position: absolute; left: 0; bottom: 2px; max-height: 58px; max-width: 180px; }
+.seal-img { position: absolute; left: 150px; bottom: -12px; max-height: 84px; max-width: 84px; opacity: 0.92; }
+table.salary td.amount, table.salary th.amount { text-align: right; white-space: nowrap; }
+table.salary { width: 100%; border-collapse: collapse; margin: 6px 0 14px; }
+table.salary th, table.salary td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+table.salary tfoot td { font-weight: bold; border-top: 1px solid #9ca3af; }
+"""
+
+
 def agreement_layout(title: str, subtitle: str, clauses: list[tuple[str, str]]) -> str:
     """NDA / Agreement HTML in the shared layout (used by app/agreements.py)."""
     body = "".join(f"<h2>{i}. {h}</h2><p>{p}</p>" for i, (h, p) in enumerate(clauses, start=1))
@@ -418,6 +486,27 @@ def _sample_values(db: Session, company, doc_type: str) -> dict[str, str]:
                          "reporting_manager": "Rahul Verma", "signatory_name": "Authorised Signatory",
                          "signatory_designation": "Founder & CEO",
                          "letterhead_contact": "Contact No.: +91 98663 23418 | Email Id: hr@example.com"},
+        "appointment": {"employee_name": "Priya Sharma", "employee_first_name": "Priya", "employee_salutation": "Ms.",
+                        "employee_id": "EMP-0042", "employee_address": "12, MG Road, Bengaluru 560001",
+                        "letter_number": f"APL/EMP-0042/{today.year}/1", "designation": "Software Engineer",
+                        "department": "Engineering", "employment_type": "Full Time",
+                        "date_of_joining_long": "3 December 2026", "work_location": "Head Office",
+                        "work_mode": "Office", "reporting_manager": "Rahul Verma", "probation_period": "6 months",
+                        "annual_ctc": "₹6,00,000.00", "annual_ctc_words": "Rupees Six Lakh Only",
+                        "monthly_ctc": "₹50,000.00",
+                        "salary_breakdown": ('<table class="salary"><thead><tr><th>Component</th>'
+                                             '<th class="amount">Monthly</th><th class="amount">Annual</th></tr></thead>'
+                                             '<tbody><tr><td>Basic</td><td class="amount">₹25,000.00</td>'
+                                             '<td class="amount">₹3,00,000.00</td></tr>'
+                                             '<tr><td>HRA</td><td class="amount">₹12,500.00</td>'
+                                             '<td class="amount">₹1,50,000.00</td></tr>'
+                                             '<tr><td>Special Allowance</td><td class="amount">₹12,500.00</td>'
+                                             '<td class="amount">₹1,50,000.00</td></tr></tbody>'
+                                             '<tfoot><tr><td>Total (CTC)</td><td class="amount">₹50,000.00</td>'
+                                             '<td class="amount">₹6,00,000.00</td></tr></tfoot></table>'),
+                        "authorized_signatory": "Anita Rao", "authorized_signatory_designation": "Head - Human Resources",
+                        "authorized_signature": tr.TRANSPARENT_PIXEL_DATA_URL,
+                        "company_seal": tr.TRANSPARENT_PIXEL_DATA_URL},
     }.get(doc_type, {"employee_name": "Priya Sharma", "employee_id": "FL-0001",
                      "employee_email": "priya.sharma@example.com", "employee_address": "Bengaluru, India",
                      "effective_date_long": long, "designation": "UI/UX Designer",
@@ -431,6 +520,8 @@ def standard_layout(doc_type: str) -> str:
         return OFFER_LAYOUT
     if doc_type == "intern_offer":
         return INTERN_OFFER_LAYOUT
+    if doc_type == "appointment":
+        return APPOINTMENT_LAYOUT
     from . import agreements  # the predefined NDA / Agreement's text
     first = next(b for b in agreements.BUILTIN_TEMPLATES if b["doc_type"] == doc_type)
     return first["html"]
@@ -443,9 +534,11 @@ def designs_for(db: Session, company, doc_type: str) -> dict:
     return {
         "doc_type": doc_type,
         "layout_html": standard_layout(doc_type),
-        "themes": [{"key": t["key"], "name": t["name"], "description": t["description"], "css": theme_css(t["key"])}
+        "themes": [{"key": t["key"], "name": t["name"],
+                    "description": t["description"],
+                    "css": theme_css(t["key"]) + (APPOINTMENT_EXTRA_CSS if doc_type == "appointment" else "")}
                    for t in THEMES],
         "sample": _sample_values(db, company, doc_type),
-        "verbatim_keys": ["compensation_terms"],
+        "verbatim_keys": ["compensation_terms", "salary_breakdown"],
     }
 

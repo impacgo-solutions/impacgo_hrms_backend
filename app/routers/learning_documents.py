@@ -21,12 +21,15 @@ recorded in the upload history.
 
 import datetime
 import hashlib
+import json
 import mimetypes
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from pydantic import Field as PydField
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -34,7 +37,8 @@ from sqlalchemy.orm import Session
 from .. import crud, form_config, models
 from ..database import get_db
 from ..deps import _OWNER_ROLE_NAME, get_current_user, require_module_enabled
-from ..storage import _ALLOWED_EXTENSIONS, _MAX_UPLOAD_BYTES, delete_uploaded_file, save_uploaded_file, uploads_root, winlong_path
+from ..storage import (OPTIONAL_EXTENSIONS, _ALLOWED_EXTENSIONS, _MAX_UPLOAD_BYTES, delete_uploaded_file,
+                       save_uploaded_file, uploads_root, winlong_path)
 
 router = APIRouter(
     prefix="/api/learning-documents", tags=["learning"],
@@ -61,8 +65,10 @@ FILE_TYPES: dict[str, tuple[str, str]] = {
     ".jpeg": ("Image", "image/jpeg"),
     ".txt": ("Text", "text/plain"),
     ".csv": ("CSV", "text/csv"),
+    ".json": ("JSON", "application/json"),
 }
-assert set(FILE_TYPES) <= _ALLOWED_EXTENSIONS
+_EXTRA_EXTENSIONS = frozenset({".json"})  # opted into storage (not accepted by other uploads)
+assert set(FILE_TYPES) <= _ALLOWED_EXTENSIONS | _EXTRA_EXTENSIONS <= _ALLOWED_EXTENSIONS | OPTIONAL_EXTENSIONS
 
 _ZIP = b"PK\x03\x04"
 _OLE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
@@ -118,8 +124,13 @@ def _read_validated(upload: UploadFile) -> tuple[bytes, str, str]:
     if sigs and not any(data.startswith(s) for s in sigs):
         raise HTTPException(status_code=400, detail=f"'{name}' is not a valid {FILE_TYPES[ext][0]} file "
                                                     "(its content doesn't match the extension).")
-    if ext in (".txt", ".csv") and b"\x00" in data[:8192]:
+    if ext in (".txt", ".csv", ".json") and b"\x00" in data[:8192]:
         raise HTTPException(status_code=400, detail=f"'{name}' is not a plain-text file.")
+    if ext == ".json":
+        try:
+            json.loads(data.decode("utf-8-sig"))
+        except (UnicodeDecodeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"'{name}' is not a valid JSON file.") from None
     upload.file.seek(0)
     return data, ext, hashlib.sha256(data).hexdigest()
 
@@ -159,16 +170,28 @@ _IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
 # ── output ──────────────────────────────────────────────────────────────────
 
+def _file_path(doc: models.LearningDocument) -> Path:
+    return winlong_path(uploads_root() / (doc.file_url or "").removeprefix("/media/"))
+
+
 def _uploader_names(db: Session, docs) -> dict:
     return crud.employee_display_names_bulk(db, {d.uploaded_by_employee_id for d in docs})
 
 
 def _out(db: Session, user: models.User, doc: models.LearningDocument, names: dict | None = None,
-         perms: dict | None = None) -> dict:
+         perms: dict | None = None, folders: dict | None = None) -> dict:
     names = names if names is not None else _uploader_names(db, [doc])
     perms = perms or _perms(db, user)
     mine = doc.uploaded_by_user_id == user.id
+    if folders is None and doc.folder_id is not None:
+        folders = _folder_index(db, doc.company_id)
+    chain = _chain(doc.folder_id, folders or {})
     return {
+        # False when the stored file isn't in this server's upload storage
+        # (e.g. uploaded through another server sharing the database).
+        "file_available": _file_path(doc).is_file(),
+        "folder_id": doc.folder_id,
+        "folder_path": " / ".join(f.name for f in chain),
         "id": doc.id, "title": doc.title, "description": doc.description, "category": doc.category,
         "file_name": doc.file_name, "file_ext": doc.file_ext.lstrip("."),
         "file_type": FILE_TYPES.get(doc.file_ext, ("File", ""))[0], "mime_type": doc.mime_type,
@@ -180,6 +203,116 @@ def _out(db: Session, user: models.User, doc: models.LearningDocument, names: di
     }
 
 
+# ── folders ─────────────────────────────────────────────────────────────────
+
+_FOLDER_NAME_MAX = 255
+_MAX_DEPTH = 20
+_BULK_MAX_FILES = 100
+
+
+def _folder_index(db: Session, company_id: uuid.UUID) -> dict:
+    """Every live folder of the company, by id."""
+    return {f.id: f for f in db.scalars(select(models.LearningFolder).where(
+        models.LearningFolder.company_id == company_id, models.LearningFolder.is_deleted.is_(False)))}
+
+
+def _chain(folder_id: uuid.UUID | None, index: dict) -> list:
+    """Folders from the top level down to [folder_id] (inclusive)."""
+    chain, seen = [], set()
+    while folder_id is not None and folder_id in index and folder_id not in seen:
+        seen.add(folder_id)
+        chain.append(index[folder_id])
+        folder_id = index[folder_id].parent_id
+    return list(reversed(chain))
+
+
+def _clean_folder_name(name: str | None) -> str:
+    n = " ".join((name or "").split())
+    if not n:
+        raise HTTPException(status_code=422, detail="Folder name is required.")
+    if len(n) > _FOLDER_NAME_MAX:
+        raise HTTPException(status_code=422, detail=f"Folder name can be at most {_FOLDER_NAME_MAX} characters.")
+    if n in (".", "..") or any(c in n for c in '/\\:*?"<>|'):
+        raise HTTPException(status_code=422, detail='Folder name can\'t contain / \\ : * ? " < > |')
+    return n
+
+
+def _folder_or_404(db: Session, user: models.User, folder_id: uuid.UUID, *, lock: bool = False) -> models.LearningFolder:
+    q = select(models.LearningFolder).where(models.LearningFolder.id == folder_id)
+    f = db.scalar(q.with_for_update() if lock else q)
+    if f is None or f.company_id != user.company_id or f.is_deleted:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    return f
+
+
+def _sibling(db: Session, company_id: uuid.UUID, parent_id: uuid.UUID | None, name: str,
+             exclude: uuid.UUID | None = None) -> models.LearningFolder | None:
+    F = models.LearningFolder
+    q = select(F).where(F.company_id == company_id, F.is_deleted.is_(False), func.lower(F.name) == name.lower(),
+                        F.parent_id.is_(None) if parent_id is None else F.parent_id == parent_id)
+    if exclude is not None:
+        q = q.where(F.id != exclude)
+    return db.scalar(q.limit(1))
+
+
+def _ensure_folder(db: Session, user: models.User, parent_id: uuid.UUID | None, name: str) -> tuple:
+    """(folder, created) -- the live folder [name] in [parent_id], created if
+    missing (the caller holds the company's folder lock)."""
+    existing = _sibling(db, user.company_id, parent_id, name)
+    if existing is not None:
+        return existing, False
+    f = models.LearningFolder(id=uuid.uuid4(), company_id=user.company_id, parent_id=parent_id, name=name,
+                              created_by_user_id=user.id, created_by_employee_id=user.employee_id,
+                              created_at=datetime.datetime.now(datetime.timezone.utc))
+    db.add(f)
+    db.flush()
+    return f, True
+
+
+def _folder_lock(db: Session, company_id: uuid.UUID) -> None:
+    crud._advisory_lock(db, "learning_folders", str(company_id))
+
+
+def _subtree(folder_id: uuid.UUID, index: dict) -> set:
+    """[folder_id] and every live folder below it."""
+    children: dict = {}
+    for f in index.values():
+        children.setdefault(f.parent_id, []).append(f.id)
+    out, stack = set(), [folder_id]
+    while stack:
+        fid = stack.pop()
+        if fid in out:
+            continue
+        out.add(fid)
+        stack.extend(children.get(fid, []))
+    return out
+
+
+def _folder_out(user: models.User, f: models.LearningFolder, index: dict, stats: dict, names: dict,
+                perms: dict) -> dict:
+    sub = _subtree(f.id, index)
+    files = sum(stats.get(fid, (0, 0))[0] for fid in sub)
+    size = sum(stats.get(fid, (0, 0))[1] for fid in sub)
+    mine = f.created_by_user_id == user.id
+    return {
+        "id": f.id, "name": f.name, "parent_id": f.parent_id,
+        "folder_count": sum(1 for x in index.values() if x.parent_id == f.id),
+        "file_count": stats.get(f.id, (0, 0))[0],      # directly inside
+        "total_files": files, "total_size_bytes": size,  # including subfolders
+        "created_by": names.get(f.created_by_employee_id, "Admin") if f.created_by_employee_id else "Admin",
+        "created_at": f.created_at, "is_mine": mine,
+        "can_edit": mine or perms["can_edit_any"], "can_delete": mine or perms["can_delete_any"],
+    }
+
+
+def _doc_stats(db: Session, company_id: uuid.UUID) -> dict:
+    """folder_id -> (live documents directly in it, their total bytes)."""
+    D = models.LearningDocument
+    return {fid: (n, int(size or 0)) for fid, n, size in db.execute(
+        select(D.folder_id, func.count(), func.sum(D.size_bytes))
+        .where(D.company_id == company_id, D.is_deleted.is_(False)).group_by(D.folder_id))}
+
+
 def _history(db: Session, user: models.User, doc: models.LearningDocument, action: str, details: str | None = None) -> None:
     db.add(models.LearningDocumentHistory(
         id=uuid.uuid4(), company_id=doc.company_id, document_id=doc.id, action=action, title=doc.title,
@@ -189,7 +322,8 @@ def _history(db: Session, user: models.User, doc: models.LearningDocument, actio
 
 
 def _store(db: Session, doc: models.LearningDocument, upload: UploadFile, ext: str, sha: str, size: int) -> None:
-    file_url, stored = save_uploaded_file(upload, entity_type=ENTITY_TYPE, entity_id=doc.id)
+    file_url, stored = save_uploaded_file(upload, entity_type=ENTITY_TYPE, entity_id=doc.id,
+                                          extra_extensions=_EXTRA_EXTENSIONS)
     doc.file_url, doc.size_bytes = file_url, stored or size
     doc.file_name = Path(upload.filename).name[:255]
     doc.file_ext = ext
@@ -217,6 +351,7 @@ def list_documents(
     mine: bool = False,
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
+    folder_id: uuid.UUID | None = None,
     sort: str = "uploaded_at",
     order: str = Query(default="desc", pattern="^(asc|desc)$"),
     limit: int = Query(default=50, ge=1, le=200),
@@ -225,7 +360,8 @@ def list_documents(
     current_user: models.User = Depends(get_current_user),
 ):
     """Every live document of the caller's company, searchable (title,
-    description, file name, uploader), filterable, sortable, paged."""
+    description, file name, uploader), filterable, sortable, paged.
+    [folder_id] limits it to that folder and everything below it."""
     if sort not in _SORTS:
         raise HTTPException(status_code=422, detail="sort must be one of " + ", ".join(sorted(_SORTS)))
     D, E = models.LearningDocument, models.Employee
@@ -249,6 +385,11 @@ def list_documents(
         base = base.where(D.uploaded_at >= datetime.datetime.combine(date_from, datetime.time.min, _IST))
     if date_to:
         base = base.where(D.uploaded_at < datetime.datetime.combine(date_to + datetime.timedelta(days=1), datetime.time.min, _IST))
+    folders = _folder_index(db, current_user.company_id)
+    if folder_id is not None:
+        if folder_id not in folders:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        base = base.where(D.folder_id.in_(_subtree(folder_id, folders)))
     total = db.scalar(select(func.count()).select_from(base.subquery()))
     key = {"uploaded_at": D.uploaded_at, "title": func.lower(D.title), "size": D.size_bytes,
            "file_type": D.file_ext, "uploader": func.lower(uploader), "category": D.category}[sort]
@@ -261,7 +402,7 @@ def list_documents(
                                                 D.uploaded_by_employee_id.is_not(None)).distinct()).scalars().all()
     upl_names = crud.employee_display_names_bulk(db, set(uploaders))
     return {
-        "items": [_out(db, current_user, d, names, perms) for d in rows],
+        "items": [_out(db, current_user, d, names, perms, folders) for d in rows],
         "total": total,
         "uploaders": sorted(({"id": str(i), "name": upl_names.get(i, "—")} for i in uploaders), key=lambda x: x["name"]),
     }
@@ -272,19 +413,24 @@ def upload_document(  # sync def -> threadpool (blocking file/DB I/O)
     title: str = Form(...),
     category: str = Form(default="Learning"),
     description: str | None = Form(default=None),
+    folder_id: uuid.UUID | None = Form(default=None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     if not _has(db, current_user, "view"):
         raise HTTPException(status_code=403, detail="You don't have access to Learning & Development.")
+    folder_id = folder_id if isinstance(folder_id, uuid.UUID) else None  # direct calls pass the Form default
+    if folder_id is not None:
+        _folder_or_404(db, current_user, folder_id)
     t, d, c = _clean_meta(title, description, (category or "").strip() or "Learning",
                           db=db, company_id=current_user.company_id)
     data, ext, sha = _read_validated(file)
     _duplicate(db, current_user.company_id, sha)
     now = datetime.datetime.now(datetime.timezone.utc)
     doc = models.LearningDocument(
-        id=uuid.uuid4(), company_id=current_user.company_id, title=t, description=d or None, category=c,
+        id=uuid.uuid4(), company_id=current_user.company_id, folder_id=folder_id,
+        title=t, description=d or None, category=c,
         file_name="", file_url="", file_ext=ext, size_bytes=len(data), content_sha256=sha, version=1,
         uploaded_by_employee_id=current_user.employee_id, uploaded_by_user_id=current_user.id, uploaded_at=now)
     db.add(doc)
@@ -328,6 +474,238 @@ def upload_history(
     } for h in rows]}
 
 
+class FolderCreate(BaseModel):
+    name: str = PydField(min_length=1, max_length=_FOLDER_NAME_MAX)
+    parent_id: uuid.UUID | None = None
+
+
+class FolderRename(BaseModel):
+    name: str = PydField(min_length=1, max_length=_FOLDER_NAME_MAX)
+
+
+_BROWSE_SORTS = {"title", "uploaded_at", "size", "file_type", "uploader", "category"}
+
+
+@router.get("/browse")
+def browse(
+    folder_id: uuid.UUID | None = None,
+    sort: str = "title",
+    order: str = Query(default="asc", pattern="^(asc|desc)$"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """One folder's contents (top level when [folder_id] is empty): its
+    breadcrumb, sub-folders (with counts / sizes, incl. everything below)
+    and the documents directly in it."""
+    if sort not in _BROWSE_SORTS:
+        raise HTTPException(status_code=422, detail="sort must be one of " + ", ".join(sorted(_BROWSE_SORTS)))
+    company_id = current_user.company_id
+    index = _folder_index(db, company_id)
+    if folder_id is not None and folder_id not in index:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    D, E = models.LearningDocument, models.Employee
+    uploader = func.trim(func.concat(E.first_name, " ", func.coalesce(E.last_name, "")))
+    key = {"uploaded_at": D.uploaded_at, "title": func.lower(D.title), "size": D.size_bytes,
+           "file_type": D.file_ext, "uploader": func.lower(uploader), "category": D.category}[sort]
+    docs = db.scalars(
+        select(D).outerjoin(E, E.id == D.uploaded_by_employee_id)
+        .where(D.company_id == company_id, D.is_deleted.is_(False),
+               D.folder_id.is_(None) if folder_id is None else D.folder_id == folder_id)
+        .order_by(key.asc() if order == "asc" else key.desc(), D.id).limit(1000)).all()
+    children = sorted((f for f in index.values() if f.parent_id == folder_id), key=lambda f: f.name.lower())
+    stats = _doc_stats(db, company_id)
+    perms = _perms(db, current_user)
+    names = crud.employee_display_names_bulk(
+        db, {d.uploaded_by_employee_id for d in docs} | {f.created_by_employee_id for f in children}
+        | ({index[folder_id].created_by_employee_id} if folder_id else set()))
+    return {
+        "folder": _folder_out(current_user, index[folder_id], index, stats, names, perms) if folder_id else None,
+        "breadcrumb": [{"id": f.id, "name": f.name} for f in _chain(folder_id, index)],
+        "folders": [_folder_out(current_user, f, index, stats, names, perms) for f in children],
+        "documents": [_out(db, current_user, d, names, perms, index) for d in docs],
+        **perms,
+    }
+
+
+@router.post("/folders", status_code=201)
+def create_folder(payload: FolderCreate, db: Session = Depends(get_db),
+                  current_user: models.User = Depends(get_current_user)):
+    if not _has(db, current_user, "view"):
+        raise HTTPException(status_code=403, detail="You don't have access to Learning & Development.")
+    name = _clean_folder_name(payload.name)
+    if payload.parent_id is not None:
+        _folder_or_404(db, current_user, payload.parent_id)
+    _folder_lock(db, current_user.company_id)
+    if _sibling(db, current_user.company_id, payload.parent_id, name) is not None:
+        raise HTTPException(status_code=409, detail=f'A folder named "{name}" already exists here.')
+    index = _folder_index(db, current_user.company_id)
+    if len(_chain(payload.parent_id, index)) >= _MAX_DEPTH:
+        raise HTTPException(status_code=422, detail=f"Folders can be nested at most {_MAX_DEPTH} levels deep.")
+    f, _ = _ensure_folder(db, current_user, payload.parent_id, name)
+    crud.create_audit_log(db, current_user.company_id, current_user.id, "create", "learning_folder", f.id)
+    db.commit()
+    index = _folder_index(db, current_user.company_id)
+    names = crud.employee_display_names_bulk(db, {f.created_by_employee_id})
+    return _folder_out(current_user, f, index, _doc_stats(db, current_user.company_id), names, _perms(db, current_user))
+
+
+@router.patch("/folders/{folder_id}")
+def rename_folder(folder_id: uuid.UUID, payload: FolderRename, db: Session = Depends(get_db),
+                  current_user: models.User = Depends(get_current_user)):
+    f = _folder_or_404(db, current_user, folder_id, lock=True)
+    if f.created_by_user_id != current_user.id and not _has(db, current_user, "edit"):
+        raise HTTPException(status_code=403, detail="Only the folder's creator or HR / Admin can rename it.")
+    name = _clean_folder_name(payload.name)
+    _folder_lock(db, current_user.company_id)
+    if _sibling(db, current_user.company_id, f.parent_id, name, exclude=f.id) is not None:
+        raise HTTPException(status_code=409, detail=f'A folder named "{name}" already exists here.')
+    if name != f.name:
+        f.name = name
+        f.updated_at = datetime.datetime.now(datetime.timezone.utc)
+        crud.create_audit_log(db, current_user.company_id, current_user.id, "update", "learning_folder", f.id)
+        db.commit()
+    index = _folder_index(db, current_user.company_id)
+    names = crud.employee_display_names_bulk(db, {f.created_by_employee_id})
+    return _folder_out(current_user, f, index, _doc_stats(db, current_user.company_id), names, _perms(db, current_user))
+
+
+@router.delete("/folders/{folder_id}", status_code=204)
+def delete_folder(folder_id: uuid.UUID, db: Session = Depends(get_db),
+                  current_user: models.User = Depends(get_current_user)):
+    """Deletes the folder with everything in it (sub-folders and documents;
+    soft, like a document delete -- the upload history keeps them, the files
+    leave storage). Needs the creator of the folder AND of everything in it,
+    or learning:delete (HR / Admin)."""
+    f = _folder_or_404(db, current_user, folder_id, lock=True)
+    _folder_lock(db, current_user.company_id)
+    index = _folder_index(db, current_user.company_id)
+    sub = _subtree(f.id, index)
+    D = models.LearningDocument
+    docs = db.scalars(select(D).where(D.company_id == current_user.company_id, D.is_deleted.is_(False),
+                                      D.folder_id.in_(sub)).with_for_update()).all()
+    if not _has(db, current_user, "delete"):
+        others = any(index[x].created_by_user_id != current_user.id for x in sub) or any(
+            d.uploaded_by_user_id != current_user.id for d in docs)
+        if others:
+            raise HTTPException(status_code=403, detail=(
+                "Only HR / Admin can delete this folder: it contains items uploaded by others."
+                if f.created_by_user_id == current_user.id else
+                "Only the folder's creator or HR / Admin can delete it."))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    urls = []
+    for d in docs:
+        d.is_deleted, d.deleted_at, d.deleted_by_user_id = True, now, current_user.id
+        urls.append(d.file_url)
+        _history(db, current_user, d, "deleted", f'With folder "{f.name}"')
+    for fid in sub:
+        x = index[fid]
+        x.is_deleted, x.deleted_at, x.deleted_by_user_id = True, now, current_user.id
+    crud.create_audit_log(db, current_user.company_id, current_user.id, "delete", "learning_folder", f.id)
+    db.commit()
+    for url in urls:
+        delete_uploaded_file(url)
+
+
+def _title_from(file_name: str) -> str:
+    stem = Path(file_name).stem
+    t = " ".join(stem.replace("_", " ").replace("-", " ").split())
+    return (t if len(t) >= 3 else file_name)[:_TITLE_MAX]
+
+
+@router.post("/bulk", status_code=201)
+def bulk_upload(  # sync def -> threadpool (blocking file/DB I/O)
+    files: list[UploadFile] = File(...),
+    paths: list[str] | None = Form(default=None),
+    folder_id: uuid.UUID | None = Form(default=None),
+    category: str = Form(default="Learning"),
+    description: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Several files at once, optionally a whole folder: [paths][i] is file
+    i's path relative to the upload (e.g. "Onboarding/Week 1/intro.pdf");
+    its folders are created under [folder_id] (top level when empty) or
+    reused when they already exist, so the uploaded structure is preserved
+    -- also across several requests of one big upload. Each file is
+    validated on its own; a rejected one (type, size, empty, content,
+    duplicate) is listed under "skipped" and the rest is still uploaded.
+    Title = the file name; category / description apply to every file."""
+    if not _has(db, current_user, "view"):
+        raise HTTPException(status_code=403, detail="You don't have access to Learning & Development.")
+    if not files:
+        raise HTTPException(status_code=422, detail="Choose at least one file.")
+    if len(files) > _BULK_MAX_FILES:
+        raise HTTPException(status_code=422, detail=f"Upload at most {_BULK_MAX_FILES} files per request.")
+    if paths is not None and len(paths) != len(files):
+        raise HTTPException(status_code=422, detail="Each file needs its path.")
+    company_id = current_user.company_id
+    if folder_id is not None:
+        _folder_or_404(db, current_user, folder_id)
+    _, d, c = _clean_meta(None, description, (category or "").strip() or "Learning", db=db, company_id=company_id)
+    _folder_lock(db, company_id)
+    base_depth = len(_chain(folder_id, _folder_index(db, company_id)))
+    uploaded, skipped, stored = [], [], []
+    seen: set[str] = set()
+    created = 0
+    try:
+        for i, up in enumerate(files):
+            raw = (paths[i] if paths is not None else None) or up.filename or ""
+            parts = [p.strip() for p in raw.replace("\\", "/").split("/") if p.strip()]
+            shown = "/".join(parts) or (up.filename or "file")
+            doc = None
+            made_here = 0
+            try:
+                if not parts or any(p in (".", "..") for p in parts):
+                    raise HTTPException(status_code=422, detail="Invalid file path.")
+                if base_depth + len(parts) - 1 > _MAX_DEPTH:
+                    raise HTTPException(status_code=422, detail=f"Folders can be nested at most {_MAX_DEPTH} levels deep.")
+                folder_names = [_clean_folder_name(p) for p in parts[:-1]]
+                up.filename = parts[-1]
+                data, ext, sha = _read_validated(up)
+                if sha in seen:
+                    raise HTTPException(status_code=409, detail="The same file is already in this upload.")
+                _duplicate(db, company_id, sha)
+                with db.begin_nested():
+                    parent = folder_id
+                    for name in folder_names:
+                        fol, made = _ensure_folder(db, current_user, parent, name)
+                        made_here += made
+                        parent = fol.id
+                    doc = models.LearningDocument(
+                        id=uuid.uuid4(), company_id=company_id, folder_id=parent, title=_title_from(parts[-1]),
+                        description=d or None, category=c, file_name="", file_url="", file_ext=ext,
+                        size_bytes=len(data), content_sha256=sha, version=1,
+                        uploaded_by_employee_id=current_user.employee_id, uploaded_by_user_id=current_user.id,
+                        uploaded_at=datetime.datetime.now(datetime.timezone.utc))
+                    db.add(doc)
+                    _store(db, doc, up, ext, sha, len(data))
+                    db.flush()
+                    where = "/".join(folder_names)
+                    _history(db, current_user, doc, "uploaded",
+                             f"{FILE_TYPES[ext][0]} · {c}" + (f" · {where}" if where else ""))
+                stored.append(doc.file_url)
+                created += made_here
+                seen.add(sha)
+                uploaded.append(doc)
+            except (HTTPException, IntegrityError) as e:
+                if doc is not None and doc.file_url:  # stored, then the savepoint rolled back
+                    delete_uploaded_file(doc.file_url)
+                reason = (str(e.detail) if isinstance(e, HTTPException)
+                          else "This file has just been uploaded by someone else.")
+                skipped.append({"path": shown, "reason": reason})
+        db.commit()
+    except Exception:
+        db.rollback()
+        for url in stored:
+            delete_uploaded_file(url)
+        raise
+    index = _folder_index(db, company_id)
+    names = _uploader_names(db, uploaded)
+    perms = _perms(db, current_user)
+    return {"uploaded": [_out(db, current_user, x, names, perms, index) for x in uploaded],
+            "skipped": skipped, "folders_created": created}
+
+
 @router.get("/{doc_id}")
 def get_document(doc_id: uuid.UUID, db: Session = Depends(get_db),
                  current_user: models.User = Depends(get_current_user)):
@@ -344,9 +722,11 @@ def download_document(
     """The file itself under its original name -- attachment (download) or
     inline (preview)."""
     doc = _get(db, current_user, doc_id)
-    path = winlong_path(uploads_root() / doc.file_url.removeprefix("/media/"))
+    path = _file_path(doc)
     if not path.is_file():
-        raise HTTPException(status_code=404, detail="The file is no longer available.")
+        raise HTTPException(status_code=404, detail=(
+            f'The file "{doc.file_name}" is not available on this server — it may have been uploaded '
+            "through another server. Ask the uploader (or HR) to replace it with Edit."))
     return FileResponse(path, media_type=doc.mime_type or mimetypes.guess_type(doc.file_name)[0] or "application/octet-stream",
                         filename=doc.file_name, content_disposition_type="attachment" if download else "inline",
                         headers={"Cache-Control": "private, max-age=60"})

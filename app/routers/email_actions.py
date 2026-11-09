@@ -49,9 +49,16 @@ textarea{{width:100%;min-height:90px;padding:10px;border:1px solid #cbd5e1;borde
 <div class="muted" style="text-align:center;margin-top:16px;font-size:12px">Secure approval link &middot; Impacgo HRMS</div></div></body></html>""")
 
 
-def _message(title: str, text: str, *, kind: str = "info", company: str = "", status: int = 200) -> HTMLResponse:
+def _leave_link(ctx) -> str:
+    """The leave request in the HRMS app (sign-in first if needed)."""
+    return email_service._deep_link("leave_request", ctx.leave.id)
+
+
+def _message(title: str, text: str, *, kind: str = "info", company: str = "", status: int = 200,
+             open_href: str | None = None) -> HTMLResponse:
     icon = {"ok": "&#10003;", "bad": "&#10005;", "warn": "!", "info": "i"}[kind]
-    open_link = f'<div class="row"><a class="btn ghost" href="{_e(email_service.hrms_url())}">Open Impacgo HRMS</a></div>'
+    href = open_href or email_service.hrms_url()
+    open_link = f'<div class="row"><a class="btn ghost" href="{_e(href)}">Open Impacgo HRMS</a></div>'
     return _page(title, f'<div class="icon {kind}">{icon}</div><h1>{_e(title)}</h1>'
                         f'<p class="muted">{_e(text)}</p>{open_link}', company, status)
 
@@ -74,7 +81,8 @@ def confirm_page(token: str):
         leave = ctx.leave
         if leave.status not in _DECIDABLE:
             return _message("Already handled", f"This leave request was already {_status_words(leave.status)}. "
-                            "Nothing more is needed.", kind="info", company=ctx.company_name)
+                            "Nothing more is needed.", kind="info", company=ctx.company_name,
+                            open_href=_leave_link(ctx))
         approve = ctx.action == "approve"
         rows = ea.leave_summary(ctx.db, leave)
         employee = rows[0][1]
@@ -93,7 +101,7 @@ def confirm_page(token: str):
                 f'{_summary_table(rows)}'
                 f'<form method="post" autocomplete="off">{form}</form>'
                 f'<p class="muted" style="margin-top:14px;font-size:12.5px">Prefer the app? '
-                f'<a href="{_e(email_service.hrms_url())}">Open Impacgo HRMS</a>.</p>')
+                f'<a href="{_e(_leave_link(ctx))}">Open this request in Impacgo HRMS</a>.</p>')
         return _page(f"{'Approve' if approve else 'Reject'} leave — {employee}", body, ctx.company_name)
     finally:
         ctx.close()
@@ -110,9 +118,10 @@ def apply_decision(token: str, notes: str = Form("")):
         if not approve and not notes:
             return _message("Reason needed", "Please go back and enter a reason for the rejection.",
                             kind="warn", company=ctx.company_name, status=400)
+        link = _leave_link(ctx)
         if ctx.leave.status not in _DECIDABLE:
             return _message("Already handled", f"This leave request was already {_status_words(ctx.leave.status)}. "
-                            "Nothing more is needed.", kind="info", company=ctx.company_name)
+                            "Nothing more is needed.", kind="info", company=ctx.company_name, open_href=link)
         try:
             out = leave_router.update_leave_request(
                 ctx.leave.id,
@@ -123,16 +132,16 @@ def apply_decision(token: str, notes: str = Form("")):
         except HTTPException as exc:
             ctx.db.rollback()
             return _message("Couldn't record your decision", str(exc.detail), kind="warn",
-                            company=ctx.company_name, status=exc.status_code)
+                            company=ctx.company_name, status=exc.status_code, open_href=link)
         final = getattr(out, "status", None) or ctx.leave.status
         employee = ea.leave_summary(ctx.db, ctx.leave)[0][1]
         if final == "approved":
             return _message("Leave approved", f"{employee}'s leave is approved. They have been notified.",
-                            kind="ok", company=ctx.company_name)
+                            kind="ok", company=ctx.company_name, open_href=link)
         if final == "rejected":
             return _message("Leave rejected", f"{employee}'s leave is rejected. They have been notified with your reason.",
-                            kind="bad", company=ctx.company_name)
+                            kind="bad", company=ctx.company_name, open_href=link)
         return _message("Approval recorded", f"Your approval of {employee}'s leave is recorded. "
-                        "It now moves to the next approver.", kind="ok", company=ctx.company_name)
+                        "It now moves to the next approver.", kind="ok", company=ctx.company_name, open_href=link)
     finally:
         ctx.close()

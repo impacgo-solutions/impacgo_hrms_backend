@@ -45,6 +45,7 @@ from .routers import (
     employees,
     employee_permissions as employee_permissions_router,
     exit_letters,
+    appointment_letters as appointment_letters_router,
     fnf,
     freelancer_onboarding,
     template_designs as template_designs_router,
@@ -399,6 +400,7 @@ app.include_router(email_router.router)
 app.include_router(email_settings_router.router)
 app.include_router(email_templates.router)
 app.include_router(exit_letters.router)
+app.include_router(appointment_letters_router.router)
 app.include_router(fnf.router)
 app.include_router(freelancer_onboarding.router)
 app.include_router(template_designs_router.router)

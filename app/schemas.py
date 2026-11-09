@@ -2974,20 +2974,83 @@ class AssetInventoryItemOut(BaseModel):
     status_key: str | None = None
     value: str | None = None
     purchased: str
+    # Asset Category: label (Personal / Office / Client, "—" for legacy
+    # assets) and the stored key.
+    category: str = "—"
+    category_key: str | None = None
+    # Optional details (None = not entered).
+    name: str | None = None
+    serial_number: str | None = None
+    description: str | None = None
     custom_fields: dict[str, str] = {}
+    images: list["AssetImageOut"] = []
+
+
+class AssetImageOut(BaseModel):
+    id: uuid.UUID
+    # /media/asset_image/<asset_id>/<file> -- signed (?t=) by the media-URL
+    # middleware on the way out, so an <img> can load it.
+    url: str
+    name: str
+    size_bytes: int = 0
+    # "image" (PNG/JPG, shown in the gallery) or "document" (PDF, Word...).
+    kind: str = "image"
+    ext: str = ""
+
+
+AssetInventoryItemOut.model_rebuild()
+
+
+ASSET_CATEGORIES: dict[str, str] = {"personal": "Personal", "office": "Office", "client": "Client"}
+
+
+def _asset_category_key(v: str | None) -> str | None:
+    """Blank -> None (not set); otherwise personal / office / client (key or
+    label, case-insensitive)."""
+    if v is None or not v.strip():
+        return None
+    key = v.strip().lower()
+    if key not in ASSET_CATEGORIES:
+        raise ValueError("Asset Category must be one of: Personal, Office, Client.")
+    return key
 
 
 class AssetInventoryItemCreate(BaseModel):
-    # Tag (the asset's identifier) and Type (NOT NULL classification) are
-    # required; the rest is optional -- status defaults to Available, and a
-    # given value / purchase date is still format-checked.
-    tag: str = Field(min_length=1, max_length=40)
-    type: str = Field(min_length=1, max_length=60)
+    # Every field is optional. Status defaults to Available; Type / Category
+    # left out are simply not set; a given value / purchase date / category
+    # is still format-checked. Tag (the asset's identifier) is normally left
+    # out: it's generated from Administration > General Settings > Document
+    # ID Formats > Asset ID (e.g. AST-001). A given tag must be unused.
+    tag: str | None = Field(default=None, max_length=40)
+    type: str | None = Field(default=None, max_length=60)
+    category: str | None = Field(default=None, max_length=15)
+    name: str | None = Field(default=None, max_length=200)
+    serial_number: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=4000)
     model: str | None = Field(default=None, max_length=120)
-    status: str = Field(default="available", min_length=1, max_length=15)
+    status: str | None = Field(default=None, max_length=15)
     value: str | None = None
     purchased: str | None = None
     custom_fields: dict[str, object] | None = None
+
+    _category = field_validator("category")(classmethod(lambda cls, v: _asset_category_key(v)))
+
+
+class AssetInventoryItemUpdate(BaseModel):
+    """Edit Asset: only the fields sent change; blank / null clears an
+    optional field. Nothing is required."""
+    type: str | None = Field(default=None, max_length=60)
+    category: str | None = Field(default=None, max_length=15)
+    name: str | None = Field(default=None, max_length=200)
+    serial_number: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=4000)
+    model: str | None = Field(default=None, max_length=120)
+    status: str | None = Field(default=None, max_length=15)
+    value: str | None = None
+    purchased: str | None = None
+    custom_fields: dict[str, object] | None = None
+
+    _category = field_validator("category")(classmethod(lambda cls, v: _asset_category_key(v)))
 
 
 class AssetInventoryItemStatusUpdate(BaseModel):
@@ -3529,7 +3592,8 @@ class SalaryRevisionRequestUpdate(BaseModel):
 
 class AssetRequestCreate(BaseModel):
     employee_id: uuid.UUID
-    asset_type: str = Field(min_length=1, max_length=60)
+    # Optional (blank = not specified; stored '').
+    asset_type: str | None = Field(default=None, max_length=60)
     justification: str | None = Field(default=None, max_length=2000)
 
 

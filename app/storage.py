@@ -49,12 +49,16 @@ _SIGNATURES: dict[str, tuple[bytes, ...]] = {
     ".docx": (_ZIP,), ".xlsx": (_ZIP,), ".pptx": (_ZIP,),
     ".doc": (_OLE,), ".xls": (_OLE,), ".ppt": (_OLE,),
 }
-_TEXT_EXTENSIONS = {".txt", ".csv"}
+_TEXT_EXTENSIONS = {".txt", ".csv", ".json"}
 _TYPE_LABELS = {
     ".pdf": "PDF", ".png": "PNG image", ".jpg": "JPG image", ".jpeg": "JPG image",
     ".doc": "Word", ".docx": "Word", ".xls": "Excel", ".xlsx": "Excel",
-    ".ppt": "PowerPoint", ".pptx": "PowerPoint", ".txt": "text", ".csv": "CSV",
+    ".ppt": "PowerPoint", ".pptx": "PowerPoint", ".txt": "text", ".csv": "CSV", ".json": "JSON",
 }
+
+# Types a caller may opt into on top of _ALLOWED_EXTENSIONS (not accepted by
+# the other upload endpoints): save_uploaded_file(extra_extensions=...).
+OPTIONAL_EXTENSIONS = frozenset({".json"})
 
 
 def content_matches_extension(head: bytes, extension: str) -> bool:
@@ -88,20 +92,23 @@ def delete_uploaded_file(file_url: str) -> None:
 
 
 def save_uploaded_file(
-    upload: UploadFile, *, entity_type: str, entity_id: uuid.UUID
+    upload: UploadFile, *, entity_type: str, entity_id: uuid.UUID,
+    extra_extensions: frozenset = frozenset(),
 ) -> tuple[str, int]:
     """Writes an uploaded file to disk under uploads/<entity_type>/<entity_id>/,
     naming it with a fresh uuid (+ original extension) so two uploads never
     collide and the stored path stays short regardless of the original
     filename, and returns (file_url, size_bytes). file_url is a path
-    servable via the /media static mount set up in main.py."""
+    servable via the /media static mount set up in main.py.
+    [extra_extensions]: types from OPTIONAL_EXTENSIONS this caller accepts too."""
     original_name = Path(upload.filename or "file").name
     extension = Path(original_name).suffix.lower()
-    if extension not in _ALLOWED_EXTENSIONS:
+    allowed = _ALLOWED_EXTENSIONS | (set(extra_extensions) & OPTIONAL_EXTENSIONS)
+    if extension not in allowed:
         raise HTTPException(
             status_code=400,
             detail=f"File type '{extension or 'unknown'}' is not allowed. "
-            f"Allowed types: {', '.join(sorted(_ALLOWED_EXTENSIONS))}",
+            f"Allowed types: {', '.join(sorted(allowed))}",
         )
     # Store under a short, bounded name (uuid + extension only) rather than
     # appending the original filename -- the original can be long (spaces,

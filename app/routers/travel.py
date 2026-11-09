@@ -135,6 +135,23 @@ def _submit_travel(db: Session, current_user: models.User, row: models.TravelReq
         row.decided_at, row.decision_notes, row.approver_id = None, None, None
 
 
+def _notify_step_passed(db: Session, company_id: uuid.UUID, employee_id: uuid.UUID, label: str,
+                        entity_type: str, entity_id: uuid.UUID, actor_employee_id: uuid.UUID | None) -> None:
+    """A configured multi-step workflow: this approval moved the request on
+    (crud.decide_configurable_request already told the next approver) --
+    tell the employee where their request stands."""
+    ref = crud.request_reference(db, entity_type, entity_id)
+    what = f"{label}{f' {ref}' if ref else ''}"
+    actor = crud.employee_display_name(db, actor_employee_id)
+    crud.notify_requester_update(
+        db, company_id, employee_id, request_type_label=label, event_key=f"{entity_type}_progress",
+        title=f"{what} approved by {actor}, now with the next approver",
+        body=f"Your {what[0].lower() + what[1:]} was approved by {actor} and has moved to the next approver.",
+        entity_type=entity_type, entity_id=entity_id, actor_employee_id=actor_employee_id,
+    )
+    db.commit()
+
+
 @router.post("/travel-requests", status_code=201)
 def create_travel_request(
     payload: schemas.TravelRequestApiCreate,
@@ -316,6 +333,9 @@ def update_travel_request(
             effective_status, payload.decision_notes, "travel_request", request.id,
         )
         db.commit()
+    elif payload.status == "approved":
+        _notify_step_passed(db, company.id, request.employee_id, "Travel Request", "travel_request",
+                            request.id, current_user.employee_id)
     return te.travel_request_out(db, request, viewer=current_user)
 
 
@@ -643,6 +663,9 @@ def update_expense_report(
             effective_status, payload.decision_notes, "expense_report", claim.id,
         )
         db.commit()
+    elif payload.status == "approved":
+        _notify_step_passed(db, claim.company_id, claim.employee_id, "Expense Report", "expense_report",
+                            claim.id, current_user.employee_id)
     return te.expense_report_out(db, claim, viewer=current_user)
 
 
@@ -663,11 +686,26 @@ def update_expense_payment(
     posted = claim.posting_date or claim.claim_date
     if payload.clearance_date and payload.clearance_date < posted:
         raise HTTPException(status_code=400, detail="Clearance date cannot be before the posting date.")
+    was_paid = bool(claim.is_paid)
     claim.is_paid, claim.clearance_date = payload.is_paid, payload.clearance_date
     claim.updated_at = datetime.now(timezone.utc)
     crud.create_audit_log(db, claim.company_id, current_user.id, "paid" if payload.is_paid else "unpaid", _EXPENSE_ENTITY, claim.id)
     db.commit()
     db.refresh(claim)
+    if payload.is_paid and not was_paid:
+        ref = claim.claim_no or "your expense report"
+        cleared = f" It cleared on {claim.clearance_date.strftime('%d %b %Y')}." if claim.clearance_date else ""
+        crud.notify_requester_update(
+            db, claim.company_id, claim.employee_id, request_type_label="Expense Report",
+            event_key="expense_report_paid",
+            title=f"Expense Report {ref} reimbursement paid",
+            body=f"Your expense report {ref} has been reimbursed.{cleared}",
+            entity_type="expense_report", entity_id=claim.id,
+            extra_details={"Payment Status": "Paid",
+                           "Clearance Date": claim.clearance_date.strftime("%d %b %Y") if claim.clearance_date else "—"},
+            actor_employee_id=current_user.employee_id,
+        )
+        db.commit()
     return te.expense_report_out(db, claim, viewer=current_user)
 
 

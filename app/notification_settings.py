@@ -68,11 +68,40 @@ EVENT_CATALOG: list[dict] = [
      "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
     {"event_key": "salary_revision_request", "category": "Payroll", "label": "Salary revision request",
      "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
-    {"event_key": "travel_request", "category": "Payroll", "label": "Travel request",
-     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
-    {"event_key": "expense_report", "category": "Payroll", "label": "Expense report",
-     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
     {"event_key": "fnf_settlement", "category": "Payroll", "label": "Full & Final Settlement lifecycle",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+
+    # ---- Travel & Expense (app/routers/travel.py) -----------------------
+    # Replaced the single "travel_request" / "expense_report" toggles; a
+    # company's saved choice for those still applies (see LEGACY_EVENT_KEYS).
+    {"event_key": "travel_request_submitted", "category": "Travel & Expense",
+     "label": "Travel request awaiting approval (new, resubmitted or next step -- to approvers)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "travel_request_progress", "category": "Travel & Expense",
+     "label": "Travel request approved at a step, moved to the next approver (to employee)",
+     "channels": {"email": {"available": True, "default": False}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "travel_request_approved", "category": "Travel & Expense", "label": "Travel request approved (to employee)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "travel_request_rejected", "category": "Travel & Expense", "label": "Travel request rejected (to employee)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "travel_request_sent_back", "category": "Travel & Expense",
+     "label": "Travel request sent back for changes (to employee)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "expense_report_submitted", "category": "Travel & Expense",
+     "label": "Expense report awaiting approval (new, resubmitted or next step -- to approvers)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "expense_report_progress", "category": "Travel & Expense",
+     "label": "Expense report approved at a step, moved to the next approver (to employee)",
+     "channels": {"email": {"available": True, "default": False}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "expense_report_approved", "category": "Travel & Expense", "label": "Expense report approved (to employee)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "expense_report_rejected", "category": "Travel & Expense", "label": "Expense report rejected (to employee)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "expense_report_sent_back", "category": "Travel & Expense",
+     "label": "Expense report sent back for changes (to employee)",
+     "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
+    {"event_key": "expense_report_paid", "category": "Travel & Expense",
+     "label": "Expense reimbursement paid (to employee)",
      "channels": {"email": {"available": True, "default": True}, "inapp": {"available": True, "default": True}}},
 
     # ---- Recruitment & Onboarding ---------------------------------------
@@ -180,6 +209,20 @@ EVENT_CATALOG: list[dict] = [
 
 _CATALOG_BY_KEY: dict[str, dict] = {entry["event_key"]: entry for entry in EVENT_CATALOG}
 
+# Event split into finer events: an override a company saved for the old key
+# keeps applying to each new event until the new event is set itself.
+LEGACY_EVENT_KEYS: dict[str, str] = {
+    **{f"travel_request_{s}": "travel_request" for s in ("submitted", "progress", "approved", "rejected", "sent_back")},
+    **{f"expense_report_{s}": "expense_report" for s in ("submitted", "progress", "approved", "rejected", "sent_back", "paid")},
+}
+
+
+def _override(overrides: dict[tuple[str, str], bool], event_key: str, channel: str) -> bool | None:
+    value = overrides.get((event_key, channel))
+    if value is None and event_key in LEGACY_EVENT_KEYS:
+        value = overrides.get((LEGACY_EVENT_KEYS[event_key], channel))
+    return value
+
 
 def channel_enabled(db: Session, company_id: uuid.UUID | None, event_key: str | None, channel: str) -> bool:
     """Effective on/off for one (company, event, channel). Falls back to the
@@ -196,14 +239,16 @@ def channel_enabled(db: Session, company_id: uuid.UUID | None, event_key: str | 
     spec = entry["channels"][channel]
     if not spec["available"]:
         return False
-    row = db.execute(
+    keys = [event_key] + ([LEGACY_EVENT_KEYS[event_key]] if event_key in LEGACY_EVENT_KEYS else [])
+    rows = db.execute(
         text(
-            "SELECT enabled FROM core_notification_settings "
-            "WHERE company_id = :company_id AND event_key = :event_key AND channel = :channel"
+            "SELECT event_key, enabled FROM core_notification_settings "
+            "WHERE company_id = :company_id AND channel = :channel AND event_key = ANY(:keys)"
         ),
-        {"company_id": company_id, "event_key": event_key, "channel": channel},
-    ).scalar()
-    return spec["default"] if row is None else bool(row)
+        {"company_id": company_id, "channel": channel, "keys": keys},
+    ).all()
+    value = _override({(r.event_key, channel): r.enabled for r in rows}, event_key, channel)
+    return spec["default"] if value is None else bool(value)
 
 
 def mark_fired(db: Session, company_id: uuid.UUID, event_key: str, entity_id: uuid.UUID) -> bool:
@@ -243,11 +288,8 @@ def get_settings(db: Session, company_id: uuid.UUID) -> list[dict]:
     for entry in EVENT_CATALOG:
         channels = []
         for channel, spec in entry["channels"].items():
-            enabled = (
-                False
-                if not spec["available"]
-                else overrides.get((entry["event_key"], channel), spec["default"])
-            )
+            saved = _override(overrides, entry["event_key"], channel)
+            enabled = False if not spec["available"] else (spec["default"] if saved is None else saved)
             channels.append({"channel": channel, "available": spec["available"], "enabled": enabled})
         items.append({
             "event_key": entry["event_key"],

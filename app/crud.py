@@ -1802,6 +1802,8 @@ def decide_configurable_request(
         requester = db.get(models.Employee, requester_employee_id)
         if requester is not None:
             entity_type, label = DOCTYPE_NOTICE.get(doctype, (doctype, doctype.replace("_", " ").title()))
+            if doctype == "expense_claim" and _is_travel_expense_report(db, document_id):
+                entity_type, label = "expense_report", "Expense Report"
             try:
                 notify_new_request(db, company_id, requester, label, entity_type, document_id)
             except Exception:  # a notification must never undo a recorded approval
@@ -1809,6 +1811,15 @@ def decide_configurable_request(
 
                 logging.getLogger(__name__).exception("next-step approval notification failed")
     return updated.status
+
+
+def _is_travel_expense_report(db: Session, claim_id: uuid.UUID) -> bool:
+    """hcm.expense_claims holds both Travel & Expense > Expense Reports
+    (HR-EXP-... series) and Payroll > Reimbursements (REIM-...)."""
+    from .travel_expense import SERIES_PREFIX
+
+    claim = db.get(models.ExpenseClaim, claim_id)
+    return bool(claim and (claim.claim_no or "").startswith(SERIES_PREFIX))
 
 
 def _get_or_start_approval_request(
@@ -7811,8 +7822,6 @@ _ENTITY_TYPE_EVENT_KEY = {
     "overtime_request": "overtime_request",
     "timesheet": "timesheet_request",
     "work_entry": "work_entry_request",
-    "travel_request": "travel_request",
-    "expense_report": "expense_report",
     "reimbursement": "reimbursement_claim",
     "asset_request": "asset_request",
     "salary_revision_request": "salary_revision_request",
@@ -7822,9 +7831,19 @@ _ENTITY_TYPE_EVENT_KEY = {
 }
 
 
-def _notify_event_key(entity_type: str, *, decision: bool) -> str | None:
+# Travel & Expense: one Administration > Notifications event per outcome
+# (travel_request_submitted / _approved / _rejected / _sent_back, same for
+# expense_report).
+_PER_OUTCOME_EVENT_TYPES = ("travel_request", "expense_report")
+
+
+def _notify_event_key(entity_type: str, *, decision: bool, status: str | None = None) -> str | None:
     if entity_type == "leave_request":
         return "leave_decision" if decision else "leave_applied"
+    if entity_type in _PER_OUTCOME_EVENT_TYPES:
+        if not decision:
+            return f"{entity_type}_submitted"
+        return f"{entity_type}_{status}" if status in _STATUS_VERB else None
     return _ENTITY_TYPE_EVENT_KEY.get(entity_type)
 
 
@@ -8019,7 +8038,7 @@ def notify_decision(
     body = f"Your {request_type_label.lower()}{f' {ref}' if ref else ''} was {verb}."
     if decision_notes:
         body += f' Comments: "{decision_notes}"'
-    event_key = _notify_event_key(entity_type, decision=True)
+    event_key = _notify_event_key(entity_type, decision=True, status=status)
     create_notification(
         db,
         company_id,
@@ -8089,6 +8108,59 @@ def notify_decision(
         db=db,
         company_id=company_id,
         email_type=f"{email_service.REQUEST_DECIDED}_{status.upper()}"[:40],
+    )
+
+
+def notify_requester_update(
+    db: Session,
+    company_id: uuid.UUID,
+    requester_employee_id: uuid.UUID,
+    *,
+    request_type_label: str,
+    event_key: str,
+    title: str,
+    body: str,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    extra_details: dict[str, str] | None = None,
+    actor_employee_id: uuid.UUID | None = None,
+) -> None:
+    """A non-final update on the requester's own request (an approval step
+    passed, a reimbursement paid): in-app + email to the requester, each
+    gated by [event_key] in Administration > Notifications."""
+    create_notification(
+        db, company_id, get_user_id_for_employee(db, requester_employee_id),
+        title=title, body=body, entity_type=entity_type, entity_id=entity_id, event_key=event_key,
+    )
+    if not notification_settings.channel_enabled(db, company_id, event_key, "email"):
+        return
+    requester = db.get(models.Employee, requester_employee_id)
+    if requester is None:
+        return
+    requester_name = f"{requester.first_name} {requester.last_name or ''}".strip()
+    actor_name = employee_display_name(db, actor_employee_id) if actor_employee_id else None
+    email_service.send_request_email(
+        requester.work_email,
+        subject=title,
+        heading=f"{_request_heading_label(request_type_label)} Notification",
+        intro_line=body,
+        details={
+            "Employee": requester_name,
+            "Employee ID": requester.employee_code or "—",
+            "Request Type": request_type_label,
+            **_request_entity_details(db, entity_type, entity_id),
+            **(extra_details or {}),
+        },
+        entity_type=entity_type,
+        entity_id=entity_id,
+        from_display_name=actor_name,
+        cta_label="Open Now",
+        db=db,
+        company_id=company_id,
+        email_type=email_service.GENERAL,
+        # one email per (event, request, actor): two steps approved by
+        # different people within the outbox's de-dup window both arrive.
+        idempotency_key=f"{event_key}:{entity_id}:{actor_employee_id or '-'}",
     )
 
 
@@ -12074,13 +12146,24 @@ def list_asset_inventory(
 def create_asset_inventory_item(
     db: Session,
     company_id: uuid.UUID,
-    asset_tag: str,
+    asset_tag: str | None,
     asset_type: str,
     model: str,
     status: str,
     purchase_value: float | None,
     purchased_on: datetime.date | None,
+    asset_category: str | None = None,
+    asset_name: str | None = None,
+    serial_number: str | None = None,
+    description: str | None = None,
 ) -> models.AssetInventoryItem:
+    """[asset_tag] blank -> the next Asset ID from the company's configured
+    format (document_numbers 'asset', e.g. AST-001; serialized by its lock)."""
+    asset_tag = (asset_tag or "").strip()
+    if not asset_tag:
+        from . import document_numbers
+
+        asset_tag = document_numbers.next_ids(db, company_id, "asset")[0]
     _advisory_lock(db, "asset_inventory", str(company_id), asset_tag)
     existing = db.scalar(
         select(models.AssetInventoryItem).where(
@@ -12095,7 +12178,11 @@ def create_asset_inventory_item(
         id=uuid.uuid4(),
         company_id=company_id,
         asset_tag=asset_tag,
-        asset_type=asset_type,
+        asset_type=asset_type or "",
+        asset_category=asset_category,
+        asset_name=asset_name,
+        serial_number=serial_number,
+        description=description,
         model=model,
         status=status,
         purchase_value=purchase_value,
@@ -13716,7 +13803,8 @@ def asset_recovery_deduction_out(
         assignment = db.get(models.AssetAssignment, deduction.asset_assignment_id)
         if assignment is not None:
             asset = db.get(models.AssetInventoryItem, assignment.asset_id)
-            asset_label = f"{asset.asset_type} ({asset.asset_tag})" if asset else None
+            name = (asset.asset_name or asset.asset_type or "Asset") if asset else ""
+            asset_label = f"{name} ({asset.asset_tag})" if asset else None
     return {
         "id": deduction.id,
         "employee_id": deduction.employee_id,

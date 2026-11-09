@@ -1,10 +1,10 @@
 """Configurable document IDs -- Administration > General Settings > Document
-ID Formats -- for Projects, Travel Requests and Expense Reports, the same idea
-as Employee ID Format.
+ID Formats -- for Projects, Travel Requests, Expense Reports and Asset Tags,
+the same idea as Employee ID Format.
 
 An ID is  {prefix}{year + "-" when include_year}{zero-padded number}{suffix},
-e.g. PRJ-0001, HR-TR-2026-00001, HR-EXP-2026-00001 (the defaults, identical to
-the formats used before this was configurable).
+e.g. PRJ-0001, HR-TR-2026-00001, HR-EXP-2026-00001, AST-001 (the defaults,
+identical to the formats used before this was configurable).
 
 Each company keeps one core_number_series row per document type:
   prefix / suffix / padding   the format
@@ -53,6 +53,10 @@ DOCTYPES: dict[str, DocType] = {
                               models.TravelRequestModel, "request_no"),
     "expense_report": DocType("expense_report", "Expense Report ID", "HR-EXP-", 5, True,
                               models.ExpenseClaim, "claim_no"),
+    # Asset Tag of a new asset (Assets > Create Asset), e.g. AST-001. Tags
+    # created before this was configurable keep their value; ones that don't
+    # match the format (e.g. AST-LT-2301) are simply not counted.
+    "asset": DocType("asset", "Asset ID", "AST-", 3, False, models.AssetInventoryItem, "asset_tag"),
 }
 
 

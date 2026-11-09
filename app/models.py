@@ -2192,10 +2192,37 @@ class AssetInventoryItem(Base):
     )
     asset_tag: Mapped[str] = mapped_column(String(40))
     asset_type: Mapped[str] = mapped_column(String(60))
+    # 'personal' | 'office' | 'client' (db/add_asset_category.sql). Required
+    # on create; NULL only on assets created before the column existed.
+    asset_category: Mapped[str | None] = mapped_column(String(15), nullable=True)
+    # Optional details (db/add_asset_name_serial_description.sql).
+    asset_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    serial_number: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     model: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[str] = mapped_column(String(15), default="available")
     purchase_value: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     purchased_on: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+
+
+class AssetImage(Base):
+    """An image attached to an asset (db/add_asset_images.sql). The file
+    lives under uploads/asset_image/<asset_id>/ and is served only through
+    the authenticated /media route (media_access.authorize)."""
+
+    __tablename__ = "hcm_asset_images"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("core_companies.id"))
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("hcm_asset_inventory.id", ondelete="CASCADE"))
+    file_url: Mapped[str] = mapped_column(Text)
+    file_name: Mapped[str] = mapped_column(String(255))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 
 class AssetAssignment(Base):
@@ -4464,6 +4491,59 @@ class ExitLetter(Base):
     generated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class AppointmentLetterTemplate(Base):
+    """Documents > Templates > Appointment Letter: an HTML+CSS design.
+    Several per company, at most one active; version bumped on each save.
+    Seal / signature images live under uploads/appointment_letter_asset/
+    (never served by /media; embedded into generated letters only).
+    Maps to hcm_appointment_letter_templates (db/add_appointment_letters.sql)."""
+
+    __tablename__ = "hcm_appointment_letter_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("core_companies.id"))
+    name: Mapped[str] = mapped_column(String(120))
+    html_body: Mapped[str] = mapped_column(Text)
+    css_styles: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    signatory_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    signatory_designation: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    seal_image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    signature_image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AppointmentLetter(Base):
+    """One generated Appointment Letter -- an immutable snapshot (rendered
+    HTML, placeholder values, template name/version, stored PDF under
+    uploads/appointment_letter/<employee_id>/, served only through
+    /api/appointment-letters/{id}/pdf). Regenerating adds version + 1 and
+    flips is_current. Maps to hcm_appointment_letters."""
+
+    __tablename__ = "hcm_appointment_letters"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("core_companies.id"))
+    employee_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("core_employees.id"))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    letter_number: Mapped[str] = mapped_column(String(60))
+    template_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    template_name: Mapped[str] = mapped_column(String(120))
+    template_version: Mapped[int] = mapped_column(Integer)
+    rendered_html: Mapped[str] = mapped_column(Text)
+    placeholders: Mapped[dict] = mapped_column(JSONB, default=dict)
+    file_url: Mapped[str] = mapped_column(Text)
+    file_size: Mapped[int] = mapped_column(Integer, default=0)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    generated_by_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    generated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 # ── Missing Attendance & Work Compliance (db/add_attendance_compliance.sql) ──
 
 class ComplianceSettings(Base):
@@ -4595,6 +4675,9 @@ class LearningDocument(Base):
     mime_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     content_sha256: Mapped[str] = mapped_column(String(64))
+    # The folder it is in (db/add_learning_folders.sql); NULL = top level.
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("hcm_learning_folders.id"), nullable=True)
     version: Mapped[int] = mapped_column(SmallInteger, default=1)
     uploaded_by_employee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     uploaded_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
@@ -4606,6 +4689,27 @@ class LearningDocument(Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     updated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+
+class LearningFolder(Base):
+    """A folder of Learning Documents (db/add_learning_folders.sql); folders
+    nest through parent_id (NULL = top level). Soft-deleted like documents."""
+
+    __tablename__ = "hcm_learning_folders"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("hcm_learning_folders.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(255))
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    created_by_employee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    updated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
 
 class LearningDocumentHistory(Base):

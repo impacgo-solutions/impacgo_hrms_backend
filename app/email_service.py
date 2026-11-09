@@ -50,6 +50,7 @@ from dataclasses import dataclass, field
 from email.message import EmailMessage
 from email.utils import formataddr
 from pathlib import Path
+from urllib.parse import quote
 
 from sqlalchemy import and_, event, or_, select, update
 from sqlalchemy.exc import OperationalError
@@ -125,6 +126,10 @@ _ENTITY_TYPE_TO_VIEW = {
     "leave_withdrawal": "leave",
     "task": "work",
     "regularization": "attendance",
+    "compliance_exception": "attendance",
+    "shift_reminder": "attendance",
+    "attendance_record": "attendance",
+    "interview_invitation": "approvals",
     "work_entry": "work",
     "timesheet": "work",
     "overtime_request": "attendance",
@@ -200,11 +205,17 @@ def _session_slug(db: Session | None) -> str | None:
 # ── helpers ────────────────────────────────────────────────────────────────
 
 def _deep_link(entity_type: str | None, entity_id=None) -> str:
-    """`#/{view}/{id}` -- opens the exact record (see app.dart's
-    _applyDeepLinkFromUrl); without [entity_id] just the module."""
+    """`#/{view}/{id}?type={entity_type}` -- opens the exact record (see
+    app.dart's _applyDeepLinkFromUrl); without [entity_id] just the module.
+    `type` tells the app which tab/table holds the id when one screen lists
+    several kinds (Attendance: regularizations and overtime; Payroll:
+    reimbursements and salary revisions). Older app builds ignore it."""
     view_id = _ENTITY_TYPE_TO_VIEW.get(entity_type or "", "approvals")
     base = f"{settings.frontend_base_url.rstrip('/')}/#/{view_id}"
-    return f"{base}/{entity_id}" if entity_id else base
+    if not entity_id:
+        return base
+    link = f"{base}/{entity_id}"
+    return f"{link}?type={quote(entity_type, safe='')}" if entity_type else link
 
 
 def hrms_url() -> str:

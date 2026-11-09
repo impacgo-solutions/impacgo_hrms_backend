@@ -14,6 +14,8 @@ denied.
   work_entry/<work_entry_id>       owner, deciders, timesheet_approval Admin,
                                    or doc visibility
   project/<project_id>             same company + Projects access (not 'n')
+  asset_image/<asset_id>           same company + Asset Management access (not
+                                   'n'), Owner, or the asset's current assignee
   task_submission/<submission_id>  the task's assignee, their Reporting Manager, its
                                    reviewer(s) (tasks.can_view_details)
   document_template/<company_id>   same company
@@ -143,6 +145,21 @@ def authorize(db: Session, user: models.User, rel_path: str) -> str | None:
         if task is None or task.company_id != user.company_id:
             return NOT_FOUND
         return None if tasks.can_view_details(db, user, task) else FORBIDDEN
+
+    if entity_type == "asset_image":
+        # Asset photos: same company, and Asset Management access (any
+        # level), the Owner, or the employee the asset is assigned to now.
+        asset = db.get(models.AssetInventoryItem, entity_id)
+        if asset is None or asset.company_id != user.company_id:
+            return NOT_FOUND
+        if _is_owner(db, user) or _column_level(db, user, "asset_management") != "n":
+            return None
+        if user.employee_id is not None and db.query(models.AssetAssignment.id).filter(
+                models.AssetAssignment.asset_id == asset.id,
+                models.AssetAssignment.employee_id == user.employee_id,
+                models.AssetAssignment.returned_on.is_(None)).first() is not None:
+            return None
+        return FORBIDDEN
 
     if entity_type == "project":
         project = db.get(models.Project, entity_id)

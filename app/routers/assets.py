@@ -1,13 +1,16 @@
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import crud, form_config, models, schemas
 from ..database import get_db
 from ..deps import DEFAULT_LIST_LIMIT, get_current_user, require_module_enabled, require_permission
+from ..storage import delete_uploaded_file, save_uploaded_file
 
 router = APIRouter(
     prefix="/api", tags=["assets"],
@@ -63,7 +66,36 @@ def _resolve_status(db, company_id, raw: str, current: str | None = None) -> str
         db, company_id, "asset.status", text.lower().replace(" ", "_"), current=current, required=True)
 
 
-def _to_out(asset, db, custom: dict | None = None) -> schemas.AssetInventoryItemOut:
+# Asset attachments (images and documents -- invoice, warranty, manual...):
+# images PNG / JPG up to 5MB, documents PDF / Word / Excel / PowerPoint /
+# text up to 10MB; at most 20 per asset. Content is checked against the
+# extension by storage.save_uploaded_file.
+_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+_DOCUMENT_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv"}
+_ATTACHMENT_EXTENSIONS = _IMAGE_EXTENSIONS | _DOCUMENT_EXTENSIONS
+_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+_MAX_IMAGES_PER_ASSET = 20
+
+
+def _attachment_kind(file_name: str) -> str:
+    return "image" if Path(file_name or "").suffix.lower() in _IMAGE_EXTENSIONS else "document"
+
+
+def _load_images(db, asset_ids: list) -> dict:
+    out: dict = {}
+    if not asset_ids:
+        return out
+    for img in db.scalars(select(models.AssetImage).where(models.AssetImage.asset_id.in_(asset_ids))
+                          .order_by(models.AssetImage.sort_order, models.AssetImage.created_at)):
+        out.setdefault(img.asset_id, []).append(
+            schemas.AssetImageOut(id=img.id, url=img.file_url, name=img.file_name, size_bytes=img.size_bytes,
+                                  kind=_attachment_kind(img.file_name),
+                                  ext=Path(img.file_name or "").suffix.lower().lstrip(".")))
+    return out
+
+
+def _to_out(asset, db, custom: dict | None = None, images: dict | None = None) -> schemas.AssetInventoryItemOut:
     return schemas.AssetInventoryItemOut(
         id=asset.id,
         tag=asset.asset_tag,
@@ -73,7 +105,13 @@ def _to_out(asset, db, custom: dict | None = None) -> schemas.AssetInventoryItem
         status_key="in_repair" if asset.status == "repair" else asset.status,
         value=_format_inr(asset.purchase_value),
         purchased=asset.purchased_on.isoformat() if asset.purchased_on else "—",
+        category=schemas.ASSET_CATEGORIES.get(asset.asset_category or "", "—"),
+        category_key=asset.asset_category,
+        name=asset.asset_name,
+        serial_number=asset.serial_number,
+        description=asset.description,
         custom_fields=(custom or {}).get(asset.id, {}),
+        images=(images if images is not None else _load_images(db, [asset.id])).get(asset.id, []),
     )
 
 
@@ -87,7 +125,89 @@ def list_asset_inventory(
     company = db.get(models.Company, current_user.company_id)
     assets = crud.list_asset_inventory(db, company.id, limit=limit, offset=offset)
     custom = form_config.load_custom_values(db, company.id, "asset", [a.id for a in assets])
-    return [_to_out(a, db, custom) for a in assets]
+    images = _load_images(db, [a.id for a in assets])
+    return [_to_out(a, db, custom, images) for a in assets]
+
+
+def _asset_or_404(db: Session, user: models.User, item_id: uuid.UUID) -> models.AssetInventoryItem:
+    asset = db.get(models.AssetInventoryItem, item_id)
+    if asset is None or asset.company_id != user.company_id:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return asset
+
+
+@router.post("/asset-inventory/{item_id}/images", response_model=schemas.AssetInventoryItemOut)
+def upload_asset_images(  # sync def -> threadpool (blocking file/DB I/O)
+    item_id: uuid.UUID,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("asset_management")),
+):
+    """Attaches one or more images (PNG/JPG) and/or documents (PDF, Word,
+    Excel, PowerPoint, text) to an asset (multipart field `files`,
+    repeatable). All-or-nothing: if any file is rejected nothing is kept.
+    Files are stored under uploads/asset_image/<asset_id>/ and served only
+    via the authenticated /media route (media_access)."""
+    asset = _asset_or_404(db, current_user, item_id)
+    if not files:
+        raise HTTPException(status_code=400, detail="Select at least one file.")
+    existing = db.scalar(select(func.count()).select_from(models.AssetImage)
+                         .where(models.AssetImage.asset_id == asset.id)) or 0
+    if existing + len(files) > _MAX_IMAGES_PER_ASSET:
+        raise HTTPException(status_code=400, detail=(
+            f"An asset can have at most {_MAX_IMAGES_PER_ASSET} images and documents "
+            f"({existing} already attached)."))
+    for f in files:
+        if Path(f.filename or "").suffix.lower() not in _ATTACHMENT_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=(
+                f"'{f.filename}': only images (PNG, JPG) and documents (PDF, Word, Excel, PowerPoint, "
+                "TXT, CSV) are supported."))
+    saved: list[str] = []
+    try:
+        for i, f in enumerate(files):
+            # save_uploaded_file also checks the content really matches the type.
+            file_url, size = save_uploaded_file(f, entity_type="asset_image", entity_id=asset.id)
+            saved.append(file_url)
+            is_image = _attachment_kind(f.filename or "") == "image"
+            limit = _IMAGE_MAX_BYTES if is_image else _DOCUMENT_MAX_BYTES
+            if size > limit:
+                raise HTTPException(status_code=400, detail=(
+                    f"'{f.filename}' is larger than {limit // (1024 * 1024)}MB "
+                    f"(the limit for {'images' if is_image else 'documents'})."))
+            db.add(models.AssetImage(
+                id=uuid.uuid4(), company_id=asset.company_id, asset_id=asset.id, file_url=file_url,
+                file_name=Path(f.filename or "image").name[:255], size_bytes=size,
+                sort_order=existing + i, uploaded_by=current_user.employee_id))
+        crud.create_audit_log(db, asset.company_id, current_user.id, "update", "asset_inventory_item", asset.id,
+                              changes={"images_added": str(len(files))})
+        db.commit()
+    except Exception:
+        db.rollback()
+        for url in saved:
+            delete_uploaded_file(url)
+        raise
+    db.refresh(asset)
+    return _to_out(asset, db, form_config.load_custom_values(db, asset.company_id, "asset", [asset.id]))
+
+
+@router.delete("/asset-inventory/{item_id}/images/{image_id}", response_model=schemas.AssetInventoryItemOut)
+def delete_asset_image(
+    item_id: uuid.UUID,
+    image_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("asset_management")),
+):
+    asset = _asset_or_404(db, current_user, item_id)
+    img = db.get(models.AssetImage, image_id)
+    if img is None or img.asset_id != asset.id:
+        raise HTTPException(status_code=404, detail="Image not found")
+    file_url = img.file_url
+    db.delete(img)
+    crud.create_audit_log(db, asset.company_id, current_user.id, "update", "asset_inventory_item", asset.id,
+                          changes={"image_removed": img.file_name})
+    db.commit()
+    delete_uploaded_file(file_url)
+    return _to_out(asset, db, form_config.load_custom_values(db, asset.company_id, "asset", [asset.id]))
 
 
 @router.post(
@@ -100,39 +220,29 @@ def create_asset_inventory_item(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_permission("asset_management")),
 ):
+    """Every field is optional (Status defaults to Available, the Tag comes
+    from the Asset ID format)."""
     company = db.get(models.Company, current_user.company_id)
-    # Type / Status come from the company's Form Configuration options.
-    asset_type = form_config.require_option(db, company.id, "asset.type", payload.type, required=True)
-    status = _resolve_status(db, company.id, payload.status)
-    cleaned = form_config.validate_custom_values(db, company.id, "asset", payload.custom_fields)
-    # M-04: value must be a non-negative amount and the purchase date a real
-    # date (YYYY-MM-DD) not in the future -- 422 instead of silently storing
-    # None / a negative number.
-    # Both are optional: blank / "—" = not recorded.
-    raw_value = (payload.value or "").strip()
-    amount = None
-    if raw_value and raw_value != "—":
-        amount = crud.parse_inr_amount(raw_value)
-        if amount is None or raw_value.lstrip("₹ ").startswith("-"):
-            raise HTTPException(status_code=422, detail="Asset value must be a non-negative amount, e.g. 45000.")
-    raw_purchased = (payload.purchased or "").strip()
-    purchased = None
-    if raw_purchased and raw_purchased != "—":
-        purchased = crud.parse_date_safe(raw_purchased)
-        if purchased is None:
-            raise HTTPException(status_code=422, detail="Purchase date must be a valid date in YYYY-MM-DD format.")
-        if purchased > crud.company_today(db, company.id):
-            raise HTTPException(status_code=422, detail="Purchase date can't be in the future.")
+    asset_type = _resolve_type(db, company.id, payload.type)
+    status = _resolve_status(db, company.id, payload.status) if (payload.status or "").strip() else "available"
+    cleaned = form_config.validate_custom_values(db, company.id, "asset", payload.custom_fields,
+                                                 enforce_required=False)
+    amount = _parse_value(payload.value)
+    purchased = _parse_purchased(db, company.id, payload.purchased)
     try:
         asset = crud.create_asset_inventory_item(
             db,
             company.id,
             payload.tag,
             asset_type,
-            (payload.model or "").strip() or None,
+            _text(payload.model),
             status,
             amount,
             purchased,
+            asset_category=payload.category,
+            asset_name=_text(payload.name),
+            serial_number=_text(payload.serial_number),
+            description=_text(payload.description, multiline=True),
         )
         form_config.save_custom_values(db, company.id, "asset", asset.id, cleaned)
         crud.create_audit_log(db, company.id, current_user.id, "create", "asset_inventory_item", asset.id)
@@ -140,6 +250,101 @@ def create_asset_inventory_item(
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    db.refresh(asset)
+    return _to_out(asset, db, form_config.load_custom_values(db, company.id, "asset", [asset.id]))
+
+
+def _text(raw: str | None, *, multiline: bool = False) -> str | None:
+    """Trimmed text, None when blank (single-line fields collapse inner
+    whitespace runs; multi-line ones keep their line breaks)."""
+    if raw is None:
+        return None
+    t = raw.strip() if multiline else " ".join(raw.split())
+    return t or None
+
+
+def _resolve_type(db, company_id, raw: str | None, current: str | None = None) -> str:
+    """Type is optional: blank = not set (stored ''); a given one must be a
+    configured option (Form Configuration > Asset > Type)."""
+    text = (raw or "").strip()
+    if not text:
+        return ""
+    return form_config.require_option(db, company_id, "asset.type", text, current=current, required=True)
+
+
+def _parse_value(raw: str | None) -> float | None:
+    """M-04: a given value must be a non-negative amount (blank / "—" = not recorded)."""
+    text = (raw or "").strip()
+    if not text or text == "—":
+        return None
+    amount = crud.parse_inr_amount(text)
+    if amount is None or text.lstrip("₹ ").startswith("-"):
+        raise HTTPException(status_code=422, detail="Asset value must be a non-negative amount, e.g. 45000.")
+    return amount
+
+
+def _parse_purchased(db, company_id, raw: str | None):
+    """A given purchase date must be a real YYYY-MM-DD date, not in the future."""
+    text = (raw or "").strip()
+    if not text or text == "—":
+        return None
+    purchased = crud.parse_date_safe(text)
+    if purchased is None:
+        raise HTTPException(status_code=422, detail="Purchase date must be a valid date in YYYY-MM-DD format.")
+    if purchased > crud.company_today(db, company_id):
+        raise HTTPException(status_code=422, detail="Purchase date can't be in the future.")
+    return purchased
+
+
+@router.patch("/asset-inventory/{item_id}", response_model=schemas.AssetInventoryItemOut)
+def update_asset_inventory_item(
+    item_id: uuid.UUID,
+    payload: schemas.AssetInventoryItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_permission("asset_management")),
+):
+    """Edit Asset: only the fields sent change; a blank / null optional
+    field is cleared. Nothing is required. The Tag never changes."""
+    company = db.get(models.Company, current_user.company_id)
+    asset = crud.get_asset_inventory_item(db, company.id, item_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    sent = payload.model_fields_set
+    changes: dict[str, str] = {}
+
+    def put(attr: str, value) -> None:
+        if getattr(asset, attr) != value:
+            changes[attr] = "" if value is None else str(value)
+            setattr(asset, attr, value)
+
+    if "type" in sent:
+        put("asset_type", _resolve_type(db, company.id, payload.type, current=asset.asset_type))
+    if "category" in sent:
+        put("asset_category", payload.category)
+    if "name" in sent:
+        put("asset_name", _text(payload.name))
+    if "serial_number" in sent:
+        put("serial_number", _text(payload.serial_number))
+    if "description" in sent:
+        put("description", _text(payload.description, multiline=True))
+    if "model" in sent:
+        put("model", _text(payload.model))
+    if "status" in sent and (payload.status or "").strip():
+        put("status", _resolve_status(db, company.id, payload.status, current=asset.status))
+    if "value" in sent:
+        put("purchase_value", _parse_value(payload.value))
+    if "purchased" in sent:
+        put("purchased_on", _parse_purchased(db, company.id, payload.purchased))
+    if "custom_fields" in sent and payload.custom_fields is not None:
+        cleaned = form_config.validate_custom_values(db, company.id, "asset", payload.custom_fields,
+                                                     partial=True, enforce_required=False)
+        form_config.save_custom_values(db, company.id, "asset", asset.id, cleaned)
+        if cleaned:
+            changes["custom_fields"] = ", ".join(sorted(cleaned))
+    if changes:
+        crud.create_audit_log(db, company.id, current_user.id, "update", "asset_inventory_item", asset.id,
+                              changes=changes)
+    db.commit()
     db.refresh(asset)
     return _to_out(asset, db, form_config.load_custom_values(db, company.id, "asset", [asset.id]))
 
@@ -176,7 +381,8 @@ def delete_asset_inventory_item(
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
     crud.create_audit_log(db, company.id, current_user.id, "delete", "asset_inventory_item", item_id)
-    crud.delete_asset_inventory_item(db, item_id)
+    image_urls = list(db.scalars(select(models.AssetImage.file_url).where(models.AssetImage.asset_id == item_id)))
+    crud.delete_asset_inventory_item(db, item_id)  # image rows go with it (ON DELETE CASCADE)
     form_config.delete_custom_values_for(db, company.id, item_id)
     try:
         db.commit()
@@ -186,6 +392,8 @@ def delete_asset_inventory_item(
             status_code=409,
             detail="This asset has assignment history and cannot be deleted.",
         ) from exc
+    for url in image_urls:
+        delete_uploaded_file(url)
 
 
 def _assignment_out(a: models.AssetAssignment) -> schemas.AssetAssignmentOut:
@@ -349,7 +557,8 @@ def create_asset_request(
     # longer refused -- crud.notify_new_request routes the request to the
     # fallback approvers (Owner / System Settings RBAC holders) who can
     # decide it; self-approval stays blocked.
-    request = crud.create_asset_request(db, payload.employee_id, payload.asset_type, payload.justification)
+    request = crud.create_asset_request(db, payload.employee_id, " ".join((payload.asset_type or "").split()),
+                                        payload.justification)
     crud.create_audit_log(db, company.id, current_user.id, "create", "asset_request", request.id)
     db.commit()
     db.refresh(request)

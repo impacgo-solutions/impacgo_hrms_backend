@@ -34,8 +34,12 @@ class SmtpProvider(EmailProvider):
                     server.login(c.smtp_username, c.smtp_password)
                 server.send_message(mime, to_addrs=recipients)
         except smtplib.SMTPAuthenticationError as exc:
+            server_said = exc.smtp_error.decode("utf-8", "replace").strip() if exc.smtp_error else ""
             raise EmailSendError(
                 "auth_failed",
+                f"SMTP authentication failed ({exc.smtp_code}): {server_said} -- check the username and "
+                "password (Microsoft 365 / Gmail may need an app password and SMTP AUTH enabled)."
+                if server_said else
                 "SMTP authentication failed: check the username and password (Microsoft 365 / Gmail may "
                 "need an app password and SMTP AUTH enabled).", status=exc.smtp_code) from None
         except smtplib.SMTPRecipientsRefused:

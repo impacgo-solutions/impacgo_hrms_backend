@@ -292,9 +292,10 @@ def custom_field_defs(db: Session, company_id: uuid.UUID, form_key: str, *,
     return list(db.scalars(q.order_by(models.CustomFieldDef.sort_order, models.CustomFieldDef.label)))
 
 
-def _clean_one(db: Session, company_id: uuid.UUID, d: models.CustomFieldDef, raw) -> str | None:
+def _clean_one(db: Session, company_id: uuid.UUID, d: models.CustomFieldDef, raw,
+               enforce_required: bool = True) -> str | None:
     if raw is None or (isinstance(raw, str) and not raw.strip()):
-        if d.is_required and d.field_type != "checkbox":
+        if enforce_required and d.is_required and d.field_type != "checkbox":
             raise HTTPException(status_code=422, detail=f"{d.label} is required.")
         return None
     t = d.field_type
@@ -332,11 +333,13 @@ def _clean_one(db: Session, company_id: uuid.UUID, d: models.CustomFieldDef, raw
 
 
 def validate_custom_values(db: Session, company_id: uuid.UUID, form_key: str, values: dict | None, *,
-                           partial: bool = False) -> dict[str, str | None]:
+                           partial: bool = False, enforce_required: bool = True) -> dict[str, str | None]:
     """Cleans the {field_key: value} map a form submitted. Unknown keys are a
     422 (a stale form after an admin removed the field). On create
     ([partial] False) every required field must be present; on edit only the
-    keys sent are checked."""
+    keys sent are checked. [enforce_required] False (forms where every field
+    is optional, e.g. Assets) skips the required check; types are still
+    validated."""
     values = values or {}
     defs = {d.field_key: d for d in custom_field_defs(db, company_id, form_key)}
     unknown = [k for k in values if k not in defs]
@@ -347,8 +350,8 @@ def validate_custom_values(db: Session, company_id: uuid.UUID, form_key: str, va
     out: dict[str, str | None] = {}
     for key, d in defs.items():
         if key in values:
-            out[key] = _clean_one(db, company_id, d, values[key])
-        elif d.is_required and not partial:
+            out[key] = _clean_one(db, company_id, d, values[key], enforce_required)
+        elif d.is_required and not partial and enforce_required:
             raise HTTPException(status_code=422, detail=f"{d.label} is required.")
     return out
 
