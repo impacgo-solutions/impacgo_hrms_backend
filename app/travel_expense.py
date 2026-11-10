@@ -138,6 +138,32 @@ def derive_travel_header(itinerary: list[schemas.TravelItineraryIn], costing: li
     }
 
 
+DUPLICATE_WINDOW_SECONDS = 120
+
+
+def recent_duplicate_travel(db: Session, p: schemas.TravelRequestApiCreate) -> models.TravelRequestModel | None:
+    """A double-click / retry: the same employee's identical request (same
+    purpose, destination and dates) submitted in the last 2 minutes."""
+    if p.itinerary:
+        h = derive_travel_header(p.itinerary, p.costing)
+        dest, start, end = h["destination"], h["from_date"], h["to_date"]
+    else:
+        dest, start, end = p.destination, p.from_date, p.to_date
+    since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=DUPLICATE_WINDOW_SECONDS)
+    q = select(models.TravelRequestModel).where(
+        models.TravelRequestModel.employee_id == p.employee_id,
+        models.TravelRequestModel.status == "pending",
+        models.TravelRequestModel.submitted_at >= since,
+        func.coalesce(models.TravelRequestModel.destination, "") == (dest or ""),
+        func.coalesce(models.TravelRequestModel.purpose, "") == (p.purpose or ""),
+    )
+    if start:
+        q = q.where(models.TravelRequestModel.from_date == start)
+    if end:
+        q = q.where(models.TravelRequestModel.to_date == end)
+    return db.scalar(q.order_by(models.TravelRequestModel.submitted_at.desc()).limit(1))
+
+
 def find_travel_overlap(
     db: Session, employee_id: uuid.UUID, start: datetime.date, end: datetime.date, exclude_id: uuid.UUID | None = None
 ) -> models.TravelRequestModel | None:
@@ -229,6 +255,8 @@ def apply_travel_form(
     itinerary and costing rows. Validates references; the pydantic model has
     already validated the shape."""
     check_project(db, company_id, p.project_id)
+    # Costing expense types come from the company's own Expense Categories
+    # (admin configuration, same list as expense rows); a type may repeat.
     types = active_claim_types(db, company_id)
     for c in p.costing:
         _resolve_type(types, c.expense_type, "Costing Details")
@@ -255,6 +283,15 @@ def apply_travel_form(
         setattr(req, field, getattr(p, field))
     if (p.travel_funding or "").lower() not in SPONSORED_FUNDING:
         req.sponsor_details = None if p.travel_funding else req.sponsor_details
+    costing = [
+        models.TravelCostingRow(
+            id=uuid.uuid4(), sort_order=i,
+            expense_type=types[c.expense_type.lower()].name,
+            comments=c.comments, sponsored_amount=money(c.sponsored_amount), funded_amount=money(c.funded_amount),
+            total_amount=money(c.sponsored_amount + c.funded_amount),
+        )
+        for i, c in enumerate(p.costing)
+    ]
     if p.itinerary:
         for k, v in derive_travel_header(p.itinerary, p.costing).items():
             setattr(req, k, v)
@@ -265,18 +302,16 @@ def apply_travel_form(
             )
             for i, r in enumerate(p.itinerary)
         ]
-        req.costing = [
-            models.TravelCostingRow(
-                id=uuid.uuid4(), sort_order=i, expense_type=types[c.expense_type.lower()].name, comments=c.comments,
-                sponsored_amount=money(c.sponsored_amount), funded_amount=money(c.funded_amount),
-                total_amount=money(c.sponsored_amount + c.funded_amount),
-            )
-            for i, c in enumerate(p.costing)
-        ]
-    else:  # older single-row client
-        req.destination, req.from_date, req.to_date = p.destination, p.from_date, p.to_date
-        req.travel_mode, req.estimated_cost = p.travel_mode, p.estimated_cost
-        req.itinerary, req.costing = [], []
+    else:  # no itinerary yet (a draft) or an older single-row client
+        req.destination = p.destination
+        req.from_date = p.from_date or req.from_date or datetime.date.today()
+        req.to_date = p.to_date or max(req.from_date, req.to_date or req.from_date)
+        req.travel_mode = p.travel_mode
+        req.estimated_cost = (p.estimated_cost if p.estimated_cost is not None
+                              else money(sum(c.sponsored_amount + c.funded_amount for c in p.costing))
+                              if p.costing else None)
+        req.itinerary = []
+    req.costing = costing
     req.updated_at = datetime.datetime.now(datetime.timezone.utc)
     if custom is not None:
         form_config.save_custom_values(db, company_id, "travel_request", req.id, custom)
@@ -400,29 +435,10 @@ def compute_claim(
             _resolve_type(types, item.category, f"expense row {i}")
     # Custom fields are checked with the rest of the claim, before any write.
     clean_custom(db, company_id, "expense_claim", p.custom_fields, p.save_as_draft, claim_id)
-    seen = set()
-    for item in p.items:
-        key = (item.date, (item.category or "").lower(), round(item.amount, 2), (item.description or "").strip().lower())
-        if key in seen:
-            _bad(f"The expense '{item.description or item.category or 'row'}' on {item.date.isoformat()} for {item.amount:.2f} is entered twice.", 409)
-        seen.add(key)
-    # The same expense must not be claimed in another open or approved claim.
-    for item in p.items:
-        dup = db.scalar(
-            select(models.ExpenseClaim.claim_no)
-            .join(models.ExpenseClaimLine, models.ExpenseClaimLine.claim_id == models.ExpenseClaim.id)
-            .where(
-                models.ExpenseClaim.employee_id == employee.id,
-                models.ExpenseClaim.status.in_(("draft", "pending", "approved", "sent_back")),
-                models.ExpenseClaim.id != (claim_id or uuid.UUID(int=0)),
-                models.ExpenseClaimLine.expense_date == item.date,
-                func.lower(func.coalesce(models.ExpenseClaimLine.category, "")) == (item.category or "").lower(),
-                models.ExpenseClaimLine.amount == round(item.amount, 2),
-                func.lower(func.coalesce(models.ExpenseClaimLine.description, "")) == (item.description or "").strip().lower(),
-            ).limit(1)
-        )
-        if dup is not None:
-            _bad(f"'{item.description or item.category or 'Expense'}' ({item.date.isoformat()}, {item.amount:.2f}) is already claimed in {dup}.", 409)
+    # Identical expense rows (two equal taxi fares on one day) and rows that
+    # look like ones in another claim are no longer refused -- the approver
+    # sees every row. A double-click of the same report is still caught in
+    # routers/travel.create_expense_report (expense_claims.recent_duplicate).
 
     lines_total = money(sum(i.amount for i in p.items))
     taxes, tax_total = [], 0.0
@@ -460,14 +476,12 @@ def check_claim_links(
         task = db.get(models.TaskBoardCard, p.task_id)
         if task is None or task.company_id != company_id:
             _bad("The selected task was not found.", 404)
-        if p.project_id is not None and task.project_id != p.project_id:
-            _bad("The selected task does not belong to the selected project.")
     if p.travel_request_id is not None:
+        # Any of the employee's own travel requests can be linked (approved
+        # or still in progress), not only an approved one.
         trip = db.get(models.TravelRequestModel, p.travel_request_id)
         if trip is None or trip.employee_id != employee.id:
             _bad("The linked travel request was not found for this employee.", 404)
-        if trip.status != "approved":
-            _bad("Only an approved travel request can be linked to an expense report.", 409)
     if p.expense_approver_id is not None:
         if p.expense_approver_id not in allowed_expense_approver_ids(db, employee):
             _bad("The Expense Approver must be this employee's reporting manager (or someone above them), "

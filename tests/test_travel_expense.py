@@ -163,20 +163,27 @@ class TravelExpenseTests(unittest.TestCase):
 
     # ── travel request: validation ──────────────────────────────────────────
     def test_travel_validation(self):
+        # Only data-integrity checks remain.
         bad = [
             dict(contact_email="not-an-email"),
             dict(contact_number="12"),
-            dict(itinerary=[leg(frm="Pune", to="pune")]),
-            dict(itinerary=[leg(arrive=dt(10, 5))]),  # arrives before it departs
-            dict(itinerary=[leg(days=-5)]),  # in the past
-            dict(itinerary=[leg(days=1), leg(days=400)]),  # > a year
-            dict(costing=[{"expense_type": "Food", "funded_amount": 1}, {"expense_type": "food", "funded_amount": 2}]),
+            dict(itinerary=[leg(arrive=dt(10, 5))]),  # arrives before it departs (DB constraint)
             dict(costing=[{"expense_type": "Food", "funded_amount": -5}]),
-            dict(itinerary=[], costing=[], destination=None),
+            dict(itinerary=[], costing=[], destination=None),  # submitted with nowhere to go
         ]
         for kw in bad:
             with self.subTest(kw=list(kw)), self.assertRaises(ValidationError):
                 travel_payload(self.worker.id, **kw)
+        # No longer blocked: same From / To, past or year-long trips, a costing
+        # type on two rows, costing without itinerary on a draft, empty draft.
+        travel_payload(self.worker.id, itinerary=[leg(frm="Pune", to="pune")])
+        travel_payload(self.worker.id, itinerary=[leg(days=-5)])
+        travel_payload(self.worker.id, itinerary=[leg(days=1), leg(days=400)])
+        travel_payload(self.worker.id, costing=[{"expense_type": "Food", "funded_amount": 1},
+                                                {"expense_type": "food", "funded_amount": 2}])
+        travel_payload(self.worker.id, itinerary=[], costing=[{"expense_type": "Food", "funded_amount": 1}],
+                       save_as_draft=True)
+        travel_payload(self.worker.id, itinerary=[], costing=[], save_as_draft=True)
         # Optional: purpose, sponsor details, passport / ID document number.
         self.assertIsNone(travel_payload(self.worker.id, purpose="   ").purpose)
         travel_payload(self.worker.id, travel_funding="Sponsored by Third Party")
@@ -197,12 +204,25 @@ class TravelExpenseTests(unittest.TestCase):
                     travel_payload(self.worker.id, costing=[{"expense_type": "Yachts", "funded_amount": 10}]),
                     db=self.db, current_user=self.me)
 
-    def test_overlapping_trips_conflict_but_drafts_do_not(self):
-        self.new_trip()
-        self.raises(409, api.create_travel_request, travel_payload(self.worker.id), db=self.db, current_user=self.me)
-        draft, _ = self.new_trip(save_as_draft=True)  # saving a draft never conflicts
-        self.assertEqual(draft.status, "draft")
-        self.raises(409, api.submit_travel_request, draft.id, db=self.db, current_user=self.me)
+    def test_overlapping_trips_are_allowed_but_a_double_click_is_not_duplicated(self):
+        first, out = self.new_trip()
+        # the identical request again within 2 minutes (double-click / retry) -> the same request back
+        again = api.create_travel_request(travel_payload(self.worker.id), db=self.db, current_user=self.me)
+        self.assertEqual((again["id"], again.get("duplicate")), (out["id"], True))
+        # a different request over the same dates is now accepted
+        other, _ = self.new_trip(purpose="Second meeting", itinerary=[leg("Hyderabad", "Chennai", days=10)], costing=[])
+        self.assertEqual(other.status, "pending")
+        draft, _ = self.new_trip(save_as_draft=True)
+        self.assertEqual(api.submit_travel_request(draft.id, db=self.db, current_user=self.me).status, "pending")
+
+    def test_past_trip_and_empty_draft_can_be_saved_and_submitted(self):
+        past, _ = self.new_trip(itinerary=[leg("Pune", "Pune", "Car", days=-20)], costing=[])
+        self.assertEqual((past.status, past.from_date), ("pending", TODAY - datetime.timedelta(days=20)))
+        empty = api.create_travel_request(schemas.TravelRequestApiCreate(employee_id=self.worker.id, save_as_draft=True),
+                                          db=self.db, current_user=self.me)
+        row = self.db.get(models.TravelRequestModel, uuid.UUID(empty["id"]))
+        self.assertEqual((row.status, row.from_date), ("draft", TODAY))
+        self.raises(400, api.submit_travel_request, row.id, db=self.db, current_user=self.me)  # nothing to go on yet
 
     def test_an_unrelated_person_cannot_file_for_another_employee(self):
         if self.stranger is None:
@@ -278,7 +298,8 @@ class TravelExpenseTests(unittest.TestCase):
             advances=[{"advance_id": adv.id, "allocated_amount": 300}], remark="client trip", cost_center="Main",
             payable_account="Payroll Payable")
         self.assertEqual(claim.status, "pending")
-        self.assertRegex(claim.claim_no, rf"^HR-EXP-{TODAY.year}-\d{{5}}$")
+        # The company's configured Document ID Format (default HR-EXP-<year>-#####).
+        self.assertRegex(claim.claim_no, r"\d+$")
         self.assertEqual(float(claim.total_claimed), 1000.0)
         self.assertEqual(float(claim.total_taxes), 200.0)  # 180 + 20
         self.assertEqual(float(claim.advance_amount), 300.0)
@@ -321,10 +342,8 @@ class TravelExpenseTests(unittest.TestCase):
     def test_claim_validation(self):
         today = TODAY
         bad = [
-            dict(items=[]),
+            dict(items=[]),  # submitting needs at least one expense
             dict(items=[{"date": today, "category": "Food", "description": "x", "amount": 0}]),
-            dict(items=[{"date": today + datetime.timedelta(days=9), "category": "Food", "description": "x", "amount": 5}]),
-            dict(posting_date=today + datetime.timedelta(days=9)),
             dict(clearance_date=today - datetime.timedelta(days=30)),
             dict(taxes=[{"account_head": "GST"}]),
             dict(taxes=[{"account_head": "GST", "rate": 140}]),
@@ -334,6 +353,15 @@ class TravelExpenseTests(unittest.TestCase):
         for kw in bad:
             with self.subTest(kw=list(kw)), self.assertRaises(ValidationError):
                 claim_payload(self.worker.id, **kw)
+        # No longer blocked: future-dated expenses / posting date, an empty draft.
+        claim_payload(self.worker.id, items=[{"date": today + datetime.timedelta(days=9), "amount": 5}])
+        claim_payload(self.worker.id, posting_date=today + datetime.timedelta(days=9))
+        claim_payload(self.worker.id, items=[], save_as_draft=True)
+
+    def test_empty_draft_claim_then_submit_needs_an_expense(self):
+        draft, _ = self.new_claim(items=[], save_as_draft=True)
+        self.assertEqual((draft.status, float(draft.total_amount)), ("draft", 0.0))
+        self.raises(400, api.submit_expense_report, draft.id, db=self.db, current_user=self.me)
 
     def test_unknown_or_inactive_claim_type_is_refused(self):
         item = {"date": TODAY, "category": "Yachts", "description": "x", "amount": 5}
@@ -345,14 +373,14 @@ class TravelExpenseTests(unittest.TestCase):
         item["category"] = "calls"
         self.raises(400, api.create_expense_report, claim_payload(self.worker.id, items=[item]), db=self.db, current_user=self.me)
 
-    def test_duplicate_expense_rows_are_refused_within_and_across_claims(self):
+    def test_identical_expense_rows_are_allowed_within_and_across_claims(self):
         same = {"date": TODAY - datetime.timedelta(days=1), "category": "Food", "description": "Lunch", "amount": 250}
-        self.raises(409, api.create_expense_report, claim_payload(self.worker.id, items=[same, dict(same)]), db=self.db, current_user=self.me)
-        self.new_claim(items=[same])
+        two, _ = self.new_claim(items=[same, dict(same)])  # e.g. two equal taxi fares on one day
+        self.assertEqual((len(two.lines), float(two.total_claimed)), (2, 500.0))
         other = {"date": TODAY, "category": "Calls", "description": "Recharge", "amount": 99}
-        detail = self.raises(409, api.create_expense_report, claim_payload(self.worker.id, items=[dict(same), other]),
-                             db=self.db, current_user=self.me)
-        self.assertIn("already claimed", detail)
+        again, _ = self.new_claim(items=[dict(same), other])
+        self.assertNotEqual(again.id, two.id)
+        self.assertEqual(again.status, "pending")
 
     def test_advance_rules(self):
         adv = self.advance(300)
@@ -384,10 +412,13 @@ class TravelExpenseTests(unittest.TestCase):
         self.raises(404, api.create_expense_report, claim_payload(self.worker.id, project_id=uuid.uuid4()), db=self.db, current_user=self.me)
         self.raises(404, api.create_expense_report, claim_payload(self.worker.id, task_id=uuid.uuid4()), db=self.db, current_user=self.me)
         trip, _ = self.new_trip()
-        self.raises(409, api.create_expense_report, claim_payload(self.worker.id, travel_request_id=trip.id), db=self.db, current_user=self.me)
-        api.update_travel_request(trip.id, schemas.TravelRequestUpdate(status="approved"), db=self.db, current_user=self.manager)
+        # a trip still awaiting approval can be linked now
         claim, _ = self.new_claim(travel_request_id=trip.id)
         self.assertEqual(claim.travel_request_id, trip.id)
+        # ...but never someone else's trip
+        self.raises(404, api.create_expense_report,
+                    claim_payload(self.worker.id, items=[{"date": TODAY, "amount": 7}], travel_request_id=uuid.uuid4()),
+                    db=self.db, current_user=self.me)
 
     def test_only_finance_can_mark_a_claim_paid(self):
         self.raises(403, api.create_expense_report, claim_payload(self.worker.id, is_paid=True), db=self.db, current_user=self.me)

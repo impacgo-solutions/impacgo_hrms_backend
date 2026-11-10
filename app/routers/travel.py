@@ -119,16 +119,9 @@ def row_company(db: Session, row: models.TravelRequestModel) -> uuid.UUID:
 def _submit_travel(db: Session, current_user: models.User, row: models.TravelRequestModel, employee: models.Employee, resubmit: bool) -> None:
     """draft / sent-back -> pending, then tell the approvers. Required custom
     fields must be filled in before a request can be submitted."""
+    # Overlapping trips are allowed (e.g. a second request for the same
+    # dates); only the company's own required custom fields are enforced.
     te.require_custom_complete(db, employee.company_id, "travel_request", row.id)
-    clash = te.find_travel_overlap(db, row.employee_id, row.from_date, row.to_date, exclude_id=row.id)
-    if clash is not None:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"A {clash.status.replace('_', ' ')} travel request to {clash.destination or 'another destination'} "
-                f"({clash.from_date.isoformat()} to {clash.to_date.isoformat()}) already overlaps these dates."
-            ),
-        )
     row.status = "pending"
     row.submitted_at = datetime.now(timezone.utc)
     if resubmit:
@@ -171,10 +164,14 @@ def create_travel_request(
         raise HTTPException(status_code=403, detail="You can only submit this for yourself")
     if employee.company_id != company.id:
         raise HTTPException(status_code=404, detail="Employee not found")
-    # L-20: one trip at a time -- an open (pending / sent back) or approved
-    # request of the same employee overlapping these dates is a conflict.
-    # Serialized per employee so a double-click can't create both.
+    # Serialized per employee so a double-click / retry of the request just
+    # submitted returns that request instead of creating a second one.
     expense_claims.lock_employee(db, "travel_request", company.id, payload.employee_id)
+    if not payload.save_as_draft:
+        existing = te.recent_duplicate_travel(db, payload)
+        if existing is not None:
+            db.rollback()
+            return {"id": str(existing.id), "status": existing.status, "duplicate": True}
     row = models.TravelRequestModel(
         id=uuid.uuid4(), employee_id=payload.employee_id, status="draft", from_date=payload.from_date or datetime.now().date(),
         to_date=payload.to_date or datetime.now().date(),
@@ -235,7 +232,7 @@ def submit_travel_request(
     _require_owner(current_user, row.employee_id, "travel request")
     _require_editable(row.status, "travel request")
     if not row.itinerary and not row.destination:
-        raise HTTPException(status_code=400, detail="Add at least one travel itinerary row before submitting.")
+        raise HTTPException(status_code=400, detail="Add a travel itinerary row (or a destination) before submitting.")
     employee = db.get(models.Employee, row.employee_id)
     was_sent_back = row.status == "sent_back"
     _submit_travel(db, current_user, row, employee, resubmit=was_sent_back)

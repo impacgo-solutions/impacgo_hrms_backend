@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import crud, form_config, models, notification_settings, overtime, schemas, work_rules
@@ -67,7 +67,49 @@ def _work_entry_out(
         category_label=(form_config.option_label(db, company_id, "work_entry.category", entry.category)
                         if company_id else entry.category),
         custom_fields=custom.get(entry.id, {}),
+        is_other_project=bool(getattr(entry, "is_other_project", False)),
     )
+
+
+def _other_project_check(db: Session, employee_id: uuid.UUID, project: models.Project,
+                         other_project: bool) -> bool:
+    """Allocation rule for a work entry's project. An assigned project (PM
+    or active allocation) is always fine -> False (not "other"). An
+    unassigned one is allowed only when it was picked under Project >
+    "Other" and is an active, not cancelled project -> True; otherwise the
+    existing M-25 error (assigned projects only) is raised unchanged."""
+    err = work_rules.allocation_error(db, employee_id, project)
+    if err is None:
+        return False
+    if not other_project:
+        raise HTTPException(status_code=403, detail=err)
+    if not project.is_active or (project.status or "").strip().lower() == "cancelled":
+        raise HTTPException(status_code=409, detail=f"Project '{project.name}' is not active.")
+    return True
+
+
+@router.get("/work-entries/other-projects", response_model=list[schemas.OtherProjectOption])
+def other_projects(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Project > "Other": the company's active (not completed / cancelled)
+    projects the caller is NOT assigned to (neither Project Manager nor an
+    active allocation), for logging work on an additional project."""
+    if current_user.employee_id is None:
+        return []
+    P, A = models.Project, models.ProjectAllocation
+    assigned = select(A.project_id).where(A.employee_id == current_user.employee_id, A.is_active.is_(True))
+    rows = db.scalars(
+        select(P).where(
+            P.company_id == current_user.company_id,
+            P.is_active.is_(True),
+            func.lower(func.coalesce(P.status, "")).notin_(("completed", "cancelled")),
+            or_(P.project_manager_id.is_(None), P.project_manager_id != current_user.employee_id),
+            P.id.notin_(assigned),
+        ).order_by(func.lower(P.name))
+    ).all()
+    return [schemas.OtherProjectOption(id=p.id, code=p.code, name=p.name) for p in rows]
 
 
 def _require_category_fits(category: str | None) -> None:
@@ -165,9 +207,9 @@ def create_work_entry(
     # No new work on a Completed project.
     if (err := work_rules.completed_project_error(project)):
         raise HTTPException(status_code=409, detail=err)
-    # M-25: only on a project the employee is allocated to (any date).
-    if (err := work_rules.allocation_error(db, employee.id, project)):
-        raise HTTPException(status_code=403, detail=err)
+    # M-25: only on a project the employee is allocated to (any date) --
+    # or, picked under Project > "Other", any active company project.
+    is_other = _other_project_check(db, employee.id, project, payload.other_project)
     # L-16 / M-20: valid time window, no duplicate / overlap, <= 24 h a day.
     crud._advisory_lock(db, "work_entry_day", str(employee.id), payload.entry_date.isoformat())
     if (err := work_rules.entry_error(
@@ -218,8 +260,10 @@ def create_work_entry(
         task_id=task_id,
         task_name=payload.task,
     )
+    entry.is_other_project = is_other
     form_config.save_custom_values(db, company.id, "work_entry", entry.id, custom_clean)
-    crud.create_audit_log(db, company.id, current_user.id, "create", "work_entry", entry.id)
+    crud.create_audit_log(db, company.id, current_user.id, "create", "work_entry", entry.id,
+                          changes={"other_project": "true"} if is_other else None)
     # Keeps the week's Timesheet total/billable hours immediately accurate
     # -- a no-op for a brand-new 'draft' row (GET already recomputes those
     # live for draft, see _timesheet_out), but essential when this entry
@@ -394,10 +438,11 @@ def edit_work_entry(
     # No changes on (or moves to) a Completed project.
     if (err := work_rules.completed_project_error(target_project)):
         raise HTTPException(status_code=409, detail=err)
-    # M-25: moving the entry to another project needs an allocation to it.
+    # M-25: moving the entry to another project needs an allocation to it
+    # -- or the project picked under Project > "Other".
+    new_is_other = None
     if project is not None and project.id != entry.project_id:
-        if (err := work_rules.allocation_error(db, owner_employee_id, project)):
-            raise HTTPException(status_code=403, detail=err)
+        new_is_other = _other_project_check(db, owner_employee_id, project, bool(payload.other_project))
     # L-16 / M-20 on the merged values (the entry itself excluded).
     crud._advisory_lock(db, "work_entry_day", str(owner_employee_id), new_entry_date.isoformat())
     if (err := work_rules.entry_error(
@@ -412,6 +457,8 @@ def edit_work_entry(
 
     if project is not None:
         entry.project_id = project.id
+    if new_is_other is not None:  # moved to another project
+        entry.is_other_project = new_is_other
     if payload.task is not None:
         entry.task_name = payload.task
     if payload.task_id is not None:

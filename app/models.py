@@ -2613,6 +2613,9 @@ class WorkEntry(Base):
     hours: Mapped[float] = mapped_column(Numeric(4, 2))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_billable: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Logged via Project > "Other" on a project the employee wasn't assigned
+    # to (db/add_work_entry_other_project.sql).
+    is_other_project: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     status: Mapped[str] = mapped_column(String(12), default="pending")
     approver_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("core_employees.id"), nullable=True)
     decision_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

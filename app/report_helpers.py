@@ -107,6 +107,11 @@ def bucket_daily_values(
             total += daily_values.get(d, 0.0)
             d += datetime.timedelta(days=1)
         points.append(schemas.ReportChartPoint(label=label, value=round(total, 2)))
+    # A multi-year range ("All Time" from the Reports date filter) starts at
+    # the first bucket that has data instead of years of empty months.
+    if (to_date - from_date).days > 730:
+        first = next((i for i, p in enumerate(points) if p.value), len(points))
+        points = points[first:] or points[-1:]
     return points
 
 

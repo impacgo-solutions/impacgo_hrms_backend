@@ -3334,6 +3334,10 @@ class WorkEntryCreate(BaseModel):
     is_billable: bool = True
     # Form Configuration: admin-defined custom fields {field_key: value}.
     custom_fields: dict[str, object] | None = None
+    # Project > "Other": log time on an active company project the employee
+    # isn't assigned to (the allocation check is skipped for it; the entry
+    # is flagged is_other_project). False = an assigned project, as before.
+    other_project: bool = False
 
 
 class WorkEntryOut(BaseModel):
@@ -3361,6 +3365,14 @@ class WorkEntryOut(BaseModel):
     # admin-defined custom field values {field_key: value}.
     category_label: str | None = None
     custom_fields: dict[str, str] = {}
+    # True = logged via Project > "Other" (not an assigned project).
+    is_other_project: bool = False
+
+
+class OtherProjectOption(BaseModel):
+    id: uuid.UUID
+    code: str | None = None
+    name: str
 
 
 class WorkEntryUpdate(BaseModel):
@@ -3386,6 +3398,9 @@ class WorkEntryFieldsUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     is_billable: bool | None = None
     custom_fields: dict[str, object] | None = None
+    # With project_id: the new project was picked under "Other" (see
+    # WorkEntryCreate.other_project).
+    other_project: bool | None = None
 
 
 class OvertimeRequestCreate(BaseModel):
@@ -3934,10 +3949,10 @@ class TravelItineraryIn(BaseModel):
 
     @model_validator(mode="after")
     def _check(self):
+        # Kept: the database refuses an arrival before the departure. (Same
+        # From / To is allowed -- local travel, round trips.)
         if self.arrival_at is not None and self.arrival_at < self.departure_at:
             raise ValueError("Arrival cannot be before departure")
-        if self.travel_from.lower() == self.travel_to.lower():
-            raise ValueError("Travel From and Travel To must be different places")
         return self
 
 
@@ -4019,35 +4034,15 @@ class _TravelFields(BaseModel):
             raise ValueError("Contact Email is not a valid email address")
         if self.contact_number and sum(ch.isdigit() for ch in self.contact_number) < 7:
             raise ValueError("Contact Number is not valid")
-        # Sponsor details, passport / ID document number are optional
-        # (sponsored / international travel included).
-        if self.itinerary:
-            first = min(r.departure_at for r in self.itinerary)
-            last = max((r.arrival_at or r.departure_at) for r in self.itinerary)
-            if first.date() < _today_with_slack(-1):
-                raise ValueError("Travel start date cannot be in the past")
-            if (last.date() - first.date()).days > 365:
-                raise ValueError("A travel request cannot span more than a year")
-            if not self.save_as_draft:
-                # A submitted request must have costing only when funding needs it.
-                pass
-        else:
-            if self.save_as_draft:
-                raise ValueError("Add at least one travel itinerary row")
-            if not (self.destination and self.from_date and self.to_date and self.travel_mode):
-                raise ValueError("Add at least one travel itinerary row")
-            if self.to_date < self.from_date:
-                raise ValueError("to_date cannot be before from_date")
-            # L-19: travel is requested ahead of time (1 day of slack for time zones).
-            if self.from_date < _today_with_slack(-1):
-                raise ValueError("Travel start date cannot be in the past")
-            if (self.to_date - self.from_date).days > 365:
-                raise ValueError("A travel request cannot span more than a year")
-        if not self.itinerary and self.costing:
-            raise ValueError("Add the travel itinerary before the costing")
-        names = [c.expense_type.lower() for c in self.costing]
-        if len(set(names)) != len(names):
-            raise ValueError("Each expense type can appear only once in the costing")
+        # Only what a request needs to exist is enforced: past trips, long
+        # trips, costing without an itinerary and repeated costing types are
+        # all allowed, and a draft may be empty. A SUBMITTED request needs
+        # an itinerary or at least a destination (where the employee goes).
+        if not self.itinerary:
+            if not self.save_as_draft and not (self.destination or "").strip():
+                raise ValueError("Add a travel itinerary row (or a destination) before submitting")
+            if self.from_date and self.to_date and self.to_date < self.from_date:
+                raise ValueError("To Date cannot be before From Date")
         if sum(c.sponsored_amount + c.funded_amount for c in self.costing) > MAX_NUMERIC_12_2:
             raise ValueError("The travel costing total is too large")
         return self
@@ -4155,13 +4150,7 @@ class ExpenseLineItemCreate(BaseModel):
     # this same expense report (kept when the report is edited). A new
     # receipt is uploaded after saving, with the row's line_index.
     receipt_attachment_id: uuid.UUID | None = None
-
-    @model_validator(mode="after")
-    def _not_future(self):
-        # L-19: an expense is claimed after it was incurred.
-        if self.date > _today_with_slack(1):
-            raise ValueError("Expense date cannot be in the future")
-        return self
+    # Any expense date is accepted (e.g. a ticket booked ahead of the trip).
 
 
 class ExpenseTaxIn(BaseModel):
@@ -4203,7 +4192,8 @@ class ExpenseReportApiCreate(BaseModel):
     reference: str | None = Field(default=None, max_length=200)
     # Omitted = today.
     submitted_date: datetime.date = Field(default_factory=datetime.date.today)
-    items: list[ExpenseLineItemCreate] = Field(min_length=1, max_length=200)
+    # At least one expense is needed to SUBMIT; a draft may have none.
+    items: list[ExpenseLineItemCreate] = Field(default_factory=list, max_length=200)
     # Expenses & Advances / Accounting / More Info tabs.
     expense_approver_id: uuid.UUID | None = None
     posting_date: datetime.date | None = None
@@ -4231,10 +4221,8 @@ class ExpenseReportApiCreate(BaseModel):
         # M-18: the report total lands in hcm_expense_claims.total_amount NUMERIC(14,2).
         if sum(i.amount for i in self.items) > MAX_NUMERIC_14_2:
             raise ValueError("The expense report total is too large")
-        if self.submitted_date > _today_with_slack(1):
-            raise ValueError("Submitted date cannot be in the future")
-        if self.posting_date and self.posting_date > _today_with_slack(1):
-            raise ValueError("Posting date cannot be in the future")
+        if not self.items and not self.save_as_draft:
+            raise ValueError("Add at least one expense before submitting")
         if self.clearance_date and self.clearance_date < (self.posting_date or self.submitted_date):
             raise ValueError("Clearance date cannot be before the posting date")
         ids = [a.advance_id for a in self.advances]

@@ -55,11 +55,16 @@ def recent_duplicate(
     total: float,
 ) -> models.ExpenseClaim | None:
     since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=DUPLICATE_WINDOW_SECONDS)
+    # Reimbursements are always "REIM-..."; an expense report's ID follows the
+    # company's configurable Document ID Format (HR-EXP-..., EXP-..., ...),
+    # so it is recognised as "not a reimbursement" rather than by a prefix.
+    kind = (models.ExpenseClaim.claim_no.like("REIM-%") if prefix == "REIM"
+            else ~models.ExpenseClaim.claim_no.like("REIM-%"))
     return db.scalar(
         select(models.ExpenseClaim).where(
             models.ExpenseClaim.company_id == company_id,
             models.ExpenseClaim.employee_id == employee_id,
-            models.ExpenseClaim.claim_no.like(f"{prefix}-%"),
+            kind,
             models.ExpenseClaim.claim_date == claim_date,
             models.ExpenseClaim.purpose == purpose,
             models.ExpenseClaim.total_amount == round(float(total), 2),

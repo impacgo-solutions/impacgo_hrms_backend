@@ -114,6 +114,11 @@ def _attendance_totals(
     late_count = func.coalesce(
         func.sum(case((models.AttendanceRecord.status == "late", 1), else_=0)), 0
     ).label("late_count")
+    # Approved-leave days (status "on_leave": Frappe-imported history and the
+    # auto-absent job's leave days) -- used to be counted nowhere.
+    leave_count = func.coalesce(
+        func.sum(case((models.AttendanceRecord.status == "on_leave", 1), else_=0)), 0
+    ).label("leave_count")
     # The employee's own manually-selected Work Mode for the day (see
     # AttendanceRecord.work_mode) -- attendance `status` never actually
     # takes the value "wfh" (see crud.clock_in_out), so this used to always
@@ -138,6 +143,7 @@ def _attendance_totals(
             present_count,
             absent_count,
             late_count,
+            leave_count,
             wfh_count,
             hours_sum,
             worked_days,
@@ -172,6 +178,7 @@ def _attendance_totals(
         "present": sum(int(r.present_count) for r in rows_raw),
         "absent": sum(int(r.absent_count) for r in rows_raw),
         "late": sum(int(r.late_count) for r in rows_raw),
+        "on_leave": sum(int(r.leave_count) for r in rows_raw),
         "wfh": sum(int(r.wfh_count) for r in rows_raw),
         "hours": sum(float(r.hours_sum) for r in rows_raw),
         "worked_days": sum(int(r.worked_days) for r in rows_raw),
@@ -238,7 +245,7 @@ def attendance_report(
         }
 
     columns = [
-        "Employee", "Branch", "Department", "Present", "Absent", "Late", "WFH",
+        "Employee", "Branch", "Department", "Present", "Absent", "Late", "On Leave", "WFH",
         "Hours Logged", "Break (min)", "Net Hours", "Avg Hours / Day",
     ]
     rows: list[list[str]] = []
@@ -263,6 +270,7 @@ def attendance_report(
             str(p),
             str(int(r.absent_count)),
             str(int(r.late_count)),
+            str(int(r.leave_count)),
             str(int(r.wfh_count)),
             f"{h:.1f}",
             f"{break_min:.0f}",
@@ -279,6 +287,7 @@ def attendance_report(
     summary = {
         "Total Employees": str(total_employees),
         "Avg Present Days": f"{avg_present:.1f}",
+        "Leave Days": str(totals["on_leave"]),
         "Total Hours": f"{totals['hours']:.1f}",
         "Total Break Hours": f"{total_break_minutes_all / 60:.1f}",
         "Net Working Hours": f"{total_net_hours:.1f}",
@@ -314,6 +323,7 @@ def attendance_report(
                 ("Present", totals["present"]),
                 ("Absent", totals["absent"]),
                 ("Late", totals["late"]),
+                ("On Leave", totals["on_leave"]),
                 ("WFH", totals["wfh"]),
             ],
         ),
@@ -403,6 +413,10 @@ def timesheet_report(
         func.sum(case((models.WorkEntry.is_billable == False, models.WorkEntry.hours), else_=0)), 0  # noqa: E712
     ).label("non_billable_sum")
     total_sum = func.coalesce(func.sum(models.WorkEntry.hours), 0).label("total_sum")
+    # Hours logged via Project > "Other" (not an assigned project).
+    other_sum = func.coalesce(
+        func.sum(case((models.WorkEntry.is_other_project == True, models.WorkEntry.hours), else_=0)), 0  # noqa: E712
+    ).label("other_sum")
 
     stmt = (
         select(
@@ -415,6 +429,7 @@ def timesheet_report(
             billable_sum,
             non_billable_sum,
             total_sum,
+            other_sum,
         )
         .outerjoin(
             models.Timesheet,
@@ -470,7 +485,10 @@ def timesheet_report(
             full_name,
             r.branch_name or "—",
             (r.project_code or "—") if r.project_name else "—",
-            r.project_name or "—",
+            # Hours logged under Project > "Other" are marked on the project.
+            ((r.project_name + (" (Other project)" if float(r.other_sum) >= t > 0 else
+                                f" (incl. {float(r.other_sum):.1f}h as Other)" if float(r.other_sum) > 0 else ""))
+             if r.project_name else "—"),
             f"{b:.1f}",
             f"{nb:.1f}",
             f"{t:.1f}",
