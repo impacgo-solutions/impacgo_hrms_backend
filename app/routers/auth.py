@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .. import access_lifecycle, auth_state, crud, models, schemas, security
 from ..database import ensure_tenant_search_path, get_db, set_session_tenant_slug, set_tenant_context
+from ..config import settings
 from ..deps import get_current_user
 from ..rbac_columns import BUILTIN_ROLES, COLUMN_KEYS
 
@@ -174,10 +175,14 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
         public_user_id=public_user.id,
         token_version=token_version,
         password_hash=public_user.password_hash,
+        remember=payload.remember_me,
     )
 
     return schemas.LoginResponse(
         access_token=token,
+        expires_at=security.decode_access_token(token).expires_at,
+        remember_me=payload.remember_me,
+        idle_timeout_minutes=0 if payload.remember_me else settings.session_idle_minutes,
         role=primary_role.name,
         employee=employee,
         tenant_slug=tenant_slug,
@@ -186,18 +191,78 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
     )
 
 
+@router.post("/refresh")
+def refresh_session(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Sliding session: the app calls this while the user is active, shortly
+    before its token expires, and gets a fresh one. get_current_user has
+    already re-checked everything a request is checked for (signature,
+    expiry, revocation, token_version / password fingerprint, active
+    account, employee access, tenant status), so a session ended for any of
+    those reasons cannot be renewed. The new token keeps the original
+    sign-in time and "keep me signed in" choice, and never outlives the
+    session's maximum age (Settings.session_max_days / session_remember_days).
+    The old token is not revoked: other open tabs may still hold it, and it
+    expires on its own."""
+    token_data: security.TokenData | None = db.info.get("token_data")
+    if token_data is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    token = security.create_access_token(
+        user_id=current_user.id,
+        tenant_slug=token_data.tenant_slug,
+        company_id=token_data.company_id,
+        employee_id=token_data.employee_id,
+        roles=token_data.roles,
+        public_user_id=token_data.public_user_id,
+        token_version=token_data.token_version,
+        password_fingerprint_value=token_data.password_fingerprint,
+        remember=token_data.remember,
+        auth_time=token_data.auth_time,
+    )
+    new_data = security.decode_access_token(token)
+    max_age_s = (
+        settings.session_remember_days if token_data.remember else settings.session_max_days
+    ) * 86400
+    at_cap = new_data.auth_time is not None and new_data.expires_at >= new_data.auth_time + max_age_s - 1
+    if at_cap and token_data.expires_at is not None and new_data.expires_at <= token_data.expires_at:
+        # At the session's maximum age: nothing to extend.
+        raise HTTPException(status_code=401, detail="Your session has reached its time limit. Please sign in again.")
+    return {
+        "access_token": token,
+        "expires_at": new_data.expires_at,
+        "remember_me": token_data.remember,
+        "idle_timeout_minutes": 0 if token_data.remember else settings.session_idle_minutes,
+    }
+
+
 @router.post("/logout", status_code=204)
 def logout(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """AUTH-A2: ends the session server-side.
-      * The presented token is revoked immediately (its jti, in-process).
-      * Where public.users.token_version exists, it is bumped too -- that ends
-        EVERY session of this user (all devices/tabs), durably. This is the
-        intended "log out everywhere" behavior.
+    """AUTH-A2: ends THIS device's session server-side -- the presented
+    token is revoked immediately (its jti). Other devices stay signed in;
+    "Log out of all devices" is POST /api/auth/logout-all.
     Idempotent from the client's view: calling it with an already-revoked
     token returns 401, which the app already treats as "logged out"."""
+    token_data: security.TokenData | None = db.info.get("token_data")
+    if token_data is not None:
+        security.revoke_token(token_data.jti, token_data.expires_at)
+    crud.create_audit_log(db, current_user.company_id, current_user.id, "logout", "user", current_user.id)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/logout-all", status_code=204)
+def logout_all_devices(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """"Log out of all devices": revokes this token and bumps
+    public.users.token_version, which ends EVERY session of this user
+    (all devices / tabs) durably."""
     token_data: security.TokenData | None = db.info.get("token_data")
     if token_data is not None:
         security.revoke_token(token_data.jti, token_data.expires_at)
@@ -205,7 +270,7 @@ def logout(
             db, current_user
         )
         auth_state.bump_token_version(db, public_user_id)
-    crud.create_audit_log(db, current_user.company_id, current_user.id, "logout", "user", current_user.id)
+    crud.create_audit_log(db, current_user.company_id, current_user.id, "logout_all", "user", current_user.id)
     db.commit()
     return Response(status_code=204)
 

@@ -31,6 +31,11 @@ class TokenData:
     password_fingerprint: str | None = None  # "pwf": see password_fingerprint()
     jti: str | None = None
     expires_at: float | None = None  # "exp" as a unix timestamp
+    # Sliding session: "rm" = "keep me signed in on this device"; "at" = when
+    # the user signed in (unix), carried across renewals so the session can
+    # never be renewed past its maximum age. Older tokens carry neither.
+    remember: bool = False
+    auth_time: float | None = None
 
 
 # bcrypt only reads the first 72 bytes of its input -- longer passwords were
@@ -121,16 +126,33 @@ def create_access_token(
     public_user_id: uuid.UUID | None = None,
     token_version: int | None = None,
     password_hash: str | None = None,
+    remember: bool = False,
+    auth_time: float | None = None,
+    password_fingerprint_value: str | None = None,
 ) -> str:
     """P12: the full permission-code list is no longer embedded -- nothing
     ever read it (authorization is always re-derived from the DB per
     request; the Flutter app never decodes the JWT) and it inflated every
     request header. The client gets permissions from the login response body
     and GET /api/auth/me instead."""
-    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-        minutes=settings.jwt_expire_minutes
+    now = datetime.datetime.now(datetime.timezone.utc)
+    signed_in = (
+        datetime.datetime.fromtimestamp(auth_time, datetime.timezone.utc) if auth_time is not None else now
     )
-    payload: dict = {"sub": str(user_id), "exp": expires_at, "jti": uuid.uuid4().hex}
+    lifetime, max_age = (
+        (datetime.timedelta(days=settings.session_remember_days), datetime.timedelta(days=settings.session_remember_days))
+        if remember
+        else (datetime.timedelta(minutes=settings.session_idle_minutes), datetime.timedelta(days=settings.session_max_days))
+    )
+    # Never past the session's maximum age, however often it is renewed.
+    expires_at = min(now + lifetime, signed_in + max_age)
+    payload: dict = {
+        "sub": str(user_id),
+        "exp": expires_at,
+        "jti": uuid.uuid4().hex,
+        "at": int(signed_in.timestamp()),
+        "rm": bool(remember),
+    }
     if tenant_slug is not None:
         payload["tenant_slug"] = tenant_slug
     if company_id is not None:
@@ -143,7 +165,7 @@ def create_access_token(
         payload["pid"] = str(public_user_id)
     if token_version is not None:
         payload["tv"] = int(token_version)
-    fingerprint = password_fingerprint(password_hash)
+    fingerprint = password_fingerprint_value or password_fingerprint(password_hash)
     if fingerprint is not None:
         payload["pwf"] = fingerprint
     return jwt.encode(payload, settings.jwt_secret, algorithm=_JWT_ALGORITHM)
@@ -166,6 +188,8 @@ def decode_access_token(token: str) -> TokenData | None:
             password_fingerprint=payload.get("pwf"),
             jti=payload.get("jti"),
             expires_at=float(payload["exp"]) if payload.get("exp") is not None else None,
+            remember=bool(payload.get("rm", False)),
+            auth_time=float(payload["at"]) if payload.get("at") is not None else None,
         )
     except (jwt.PyJWTError, KeyError, ValueError, TypeError):
         return None

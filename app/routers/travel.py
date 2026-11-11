@@ -244,6 +244,31 @@ def submit_travel_request(
     return te.travel_request_out(db, row, viewer=current_user)
 
 
+@router.post("/travel-requests/{travel_request_id}/recall", response_model=schemas.TravelRequestOut)
+def recall_travel_request(
+    travel_request_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """The employee pulls back their own pending travel request before any
+    approver has acted: it returns to Draft (editable, re-submittable,
+    deletable) and leaves the approvers' inbox; they are told."""
+    row = _load_travel(db, travel_request_id, current_user, lock=True)
+    _require_owner(current_user, row.employee_id, "travel request")
+    if row.status != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only a pending travel request can be recalled (this one is {row.status.replace('_', ' ')}).",
+        )
+    employee = db.get(models.Employee, row.employee_id)
+    crud.recall_request(db, current_user, employee, "Travel Request", "travel_request", row.id, "travel_request")
+    row.status = "draft"
+    crud.create_audit_log(db, employee.company_id, current_user.id, "recall", _TRAVEL_ENTITY, row.id)
+    db.commit()
+    db.refresh(row)
+    return te.travel_request_out(db, row, viewer=current_user)
+
+
 @router.delete("/travel-requests/{travel_request_id}", status_code=204)
 def delete_travel_request(
     travel_request_id: uuid.UUID,
@@ -568,6 +593,34 @@ def submit_expense_report(
     db.commit()
     db.refresh(claim)
     _notify_claim(db, employee, claim)
+    return te.expense_report_out(db, claim, viewer=current_user)
+
+
+@router.post("/expense-reports/{claim_id}/recall", response_model=schemas.ExpenseReportOut)
+def recall_expense_report(
+    claim_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """The employee pulls back their own pending expense report before any
+    approver has acted: it returns to Draft (editable, re-submittable,
+    deletable) and leaves the approvers' inbox; they are told."""
+    claim = _load_claim(db, claim_id, current_user, lock=True)
+    _require_owner(current_user, claim.employee_id, "expense report")
+    if claim.status != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only a pending expense report can be recalled (this one is {claim.status.replace('_', ' ')}).",
+        )
+    employee = db.get(models.Employee, claim.employee_id)
+    crud.recall_request(
+        db, current_user, employee, "Expense Report", "expense_report", claim.id, "expense_claim",
+        extra_approver_ids=[claim.expense_approver_id] if claim.expense_approver_id else None,
+    )
+    claim.status = "draft"
+    crud.create_audit_log(db, claim.company_id, current_user.id, "recall", _EXPENSE_ENTITY, claim.id)
+    db.commit()
+    db.refresh(claim)
     return te.expense_report_out(db, claim, viewer=current_user)
 
 

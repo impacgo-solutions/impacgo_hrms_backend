@@ -92,5 +92,8 @@ def change_my_password(
         public_user_id=public_user_id,
         token_version=token_version,
         password_hash=new_hash,
+        # Same session: keeps "keep me signed in" and the original sign-in time.
+        remember=bool(getattr(db.info.get("token_data"), "remember", False)),
+        auth_time=getattr(db.info.get("token_data"), "auth_time", None),
     )
     return {"access_token": new_token}

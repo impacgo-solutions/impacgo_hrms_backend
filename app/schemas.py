@@ -352,6 +352,9 @@ class RbacScopesOut(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(min_length=1)
     password: str = Field(min_length=1, max_length=1024)
+    # "Keep me signed in on this device": a long-lived, renewing session with
+    # no idle sign-out (see Settings.session_remember_days).
+    remember_me: bool = False
 
 
 class EmployeeSummaryOut(BaseModel):
@@ -406,6 +409,13 @@ class EmployeeDirectoryEntry(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    # When this token stops working (unix seconds) -- the app renews it
+    # before then while the user is active (POST /api/auth/refresh).
+    expires_at: float | None = None
+    remember_me: bool = False
+    # Minutes without activity before the app signs out (0 = never; the
+    # "keep me signed in" sessions).
+    idle_timeout_minutes: int = 0
     role: str
     employee: EmployeeSummaryOut | None
     tenant_slug: str | None = None

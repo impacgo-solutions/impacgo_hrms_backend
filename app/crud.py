@@ -8017,6 +8017,101 @@ def request_reference(db: Session, entity_type: str, entity_id: uuid.UUID) -> st
     return None
 
 
+def request_approver_employee_ids(
+    db: Session,
+    company_id: uuid.UUID,
+    requester: models.Employee,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    extra_approver_ids: "Iterable[uuid.UUID] | None" = None,
+) -> set[uuid.UUID]:
+    """Who a pending request is currently waiting on -- the same recipients
+    notify_new_request tells: both Reporting Managers, or (configured
+    workflow) the current step's approvers, else the fallback approvers;
+    plus any named approver. Never the requester."""
+    manager_ids = active_employee_ids(db, {requester.reporting_manager_id, requester.dotted_line_manager_id} - {None})
+    doctype = ENTITY_TYPE_TO_DOCTYPE.get(entity_type, entity_type)
+    if entity_type not in _AUTO_APPROVED_ENTITY_TYPES and _has_custom_approval_workflow(db, company_id, doctype):
+        from . import approval_engine
+
+        engine_request = _get_or_start_approval_request(db, company_id, doctype, entity_id, requester.id)
+        manager_ids = active_employee_ids(db, approval_engine.current_step_approver_employee_ids(
+            db, engine_request, requester))
+    if not manager_ids:
+        manager_ids = set(list_fallback_approver_employee_ids(db, company_id, exclude_employee_id=requester.id))
+    if extra_approver_ids:
+        manager_ids = set(manager_ids) | {i for i in extra_approver_ids if i}
+    return {i for i in manager_ids if i != requester.id}
+
+
+def recall_request(
+    db: Session,
+    current_user: models.User,
+    requester: models.Employee,
+    request_type_label: str,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    doctype: str,
+    extra_approver_ids: "Iterable[uuid.UUID] | None" = None,
+) -> None:
+    """The requester pulls back a submitted request before anyone has acted.
+
+    Callers check ownership and that the request is still pending; this
+    refuses (409) once an approver has approved a step -- from then on the
+    approver must Send back instead, so an approval never silently vanishes.
+    Tells the approvers it was waiting on, then reopens a configured
+    workflow's ApprovalRequest the way a send-back does (status sent_back,
+    back to step 1, a "recalled" action in its history) so a resubmission
+    starts the chain from the beginning. The caller sets its own row to
+    'draft' and commits."""
+    from fastapi import HTTPException
+
+    from . import approval_engine
+
+    company_id = current_user.company_id
+    label = request_type_label.lower()
+    if approval_engine.approval_started(db, company_id, doctype, entity_id):
+        raise HTTPException(
+            status_code=409,
+            detail=f"An approver has already approved this {label}, so it can no longer be recalled. "
+            "Ask them to send it back if it needs changes.",
+        )
+    recipients = request_approver_employee_ids(db, company_id, requester, entity_type, entity_id, extra_approver_ids)
+    requester_name = f"{requester.first_name} {requester.last_name or ''}".strip()
+    ref = request_reference(db, entity_type, entity_id)
+    what = f"{label} ({ref})" if ref else label
+    for employee_id in recipients:
+        create_notification(
+            db,
+            company_id,
+            get_user_id_for_employee(db, employee_id),
+            title=f"{request_type_label} recalled by {requester_name}",
+            body=f"{requester_name} recalled their {what}. It no longer needs your review.",
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
+    request = db.scalar(
+        select(models.ApprovalRequest).where(
+            models.ApprovalRequest.company_id == company_id,
+            models.ApprovalRequest.doctype == doctype,
+            models.ApprovalRequest.document_id == entity_id,
+        )
+    )
+    if request is not None and request.status == "pending":
+        workflow = db.get(models.ApprovalWorkflow, request.workflow_id)
+        steps = approval_engine._distinct_step_orders(workflow) if workflow is not None else []
+        request.current_step = steps[0] if steps else 1
+        request.status = "sent_back"
+        db.add(
+            models.ApprovalAction(
+                id=uuid.uuid4(), request_id=request.id, step_order=request.current_step,
+                actor_id=current_user.id, action="recalled",
+                comments="Recalled by the requester", acted_at=datetime.datetime.now(datetime.timezone.utc),
+            )
+        )
+        db.flush()
+
+
 def notify_decision(
     db: Session,
     company_id: uuid.UUID,

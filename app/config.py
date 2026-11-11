@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     default_tenant_slug: str = "default"
     jwt_secret: str = INSECURE_DEFAULT_JWT_SECRET
     jwt_expire_minutes: int = 480
+    # Sliding session (see security.create_access_token / POST /api/auth/refresh):
+    # a token lives SESSION_IDLE_MINUTES; the app renews it while the user is
+    # active, so only an idle session ends. Renewal stops SESSION_MAX_DAYS
+    # after sign-in. "Keep me signed in on this device": tokens live
+    # SESSION_REMEMBER_DAYS (renewed while used) and there is no idle sign-out.
+    session_idle_minutes: int = 60
+    session_max_days: int = 7
+    session_remember_days: int = 30
     uploads_dir: str = "uploads"
 
     # Deployment environment (APP_ENV). Anything other than dev/development/
