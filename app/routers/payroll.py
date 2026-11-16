@@ -204,6 +204,12 @@ def create_payroll_reimbursement_inclusion(
         raise HTTPException(status_code=409, detail="This record is not fully approved yet.")
     if result == "already_scheduled":
         raise HTTPException(status_code=409, detail="This record has already been scheduled into payroll.")
+    if result == "foreign_currency":
+        raise HTTPException(
+            status_code=409,
+            detail="This expense report is in a different currency than payroll, so it can't be scheduled "
+                   "into payroll (amounts are never converted). Settle it outside payroll.",
+        )
     crud.create_audit_log(
         db, current_user.company_id, current_user.id, "create", "payroll_reimbursement_inclusion", result.id,
     )
@@ -1069,12 +1075,43 @@ def activate_payslip_html_template(
     return row
 
 
+@router.get("/payroll/payslip-html-template/preview-employees")
+def payslip_preview_employees(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(_require_payroll_edit),
+):
+    """Every active employee (live -- newly added ones included) and whether
+    they already have a generated payslip to preview against."""
+    from sqlalchemy import select as _select
+
+    rows = db.scalars(
+        _select(models.Employee)
+        .where(models.Employee.company_id == current_user.company_id, models.Employee.is_active.is_(True))
+        .order_by(models.Employee.first_name, models.Employee.last_name)
+    ).all()
+    def source(e) -> str:
+        if crud.get_latest_salary_slip_id_for_employee(db, e.id) is not None:
+            return "payslip"
+        if crud.has_salary_structure(db, e.id):
+            return "structure"
+        return "ctc" if getattr(e, "annual_ctc", None) else "none"
+
+    out = []
+    for e in rows:
+        src = source(e)
+        out.append({"id": str(e.id), "name": " ".join(p for p in (e.first_name, e.last_name) if p),
+                    "employee_code": e.employee_code, "employment_type": e.employment_type,
+                    "has_payslip": src == "payslip", "salary_source": src})
+    return out
+
+
 @router.post(
     "/payroll/payslip-html-template/preview",
     response_model=schemas.PayslipHtmlTemplatePreviewOut,
 )
 def preview_payslip_html_template(
     payload: schemas.PayslipHtmlTemplatePreviewRequest,
+    pdf: bool = False,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(_require_payroll_edit),
 ):
@@ -1090,15 +1127,17 @@ def preview_payslip_html_template(
     if error:
         raise HTTPException(status_code=400, detail=error)
     slip_id = crud.get_latest_salary_slip_id_for_employee(db, employee.id)
-    if slip_id is None:
-        raise HTTPException(
-            status_code=404,
-            detail="This employee has no generated payslip yet -- pick an employee with at "
-            "least one payroll run, or generate one first.",
-        )
-    detail = crud.get_salary_slip_detail(db, slip_id)
+    # No payslip yet (e.g. a newly added employee): project this month's
+    # payslip from their assigned salary structure -- real configured
+    # amounts, never invented figures.
+    detail = crud.get_salary_slip_detail(db, slip_id) if slip_id else crud.projected_salary_slip_detail(db, employee.id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
     placeholders = build_payslip_placeholders(detail, company)
     rendered = render_payslip_html(payload.html_body, payload.css_styles, placeholders)
+    if pdf:
+        from ..template_rendering import preview_pdf_response
+        return preview_pdf_response(rendered, f"payslip-{employee.employee_code or employee.first_name}.pdf")
     return schemas.PayslipHtmlTemplatePreviewOut(rendered_html=rendered)
 
 

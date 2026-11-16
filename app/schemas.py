@@ -686,6 +686,11 @@ class EmployeeCreate(BaseModel):
     # set the end date their own way, so they're not forced here.
     contract_start_date: datetime.date | None = None
     contract_end_date: datetime.date | None = None
+    # Intern only (rejected for any other type): the internship period, e.g.
+    # 3 months / 45 days. The end date is always computed by the server from
+    # date_of_joining (see employee_validation.internship_end_date).
+    internship_duration: int | None = Field(default=None, ge=1, le=730)
+    internship_duration_unit: str | None = Field(default=None, pattern="^(days|months)$")
     reporting_manager_id: uuid.UUID | None = None
     # Two Reporting Managers: optional second/dotted-line manager, equally
     # authorized alongside reporting_manager_id to Approve/Reject this
@@ -770,6 +775,14 @@ class EmployeeCreate(BaseModel):
                 raise ValueError("The contract end date must be on or after the contract start date.")
         elif self.contract_start_date is not None or self.contract_end_date is not None:
             raise ValueError("Contract dates can only be set for Contract employees.")
+        is_intern = (self.employment_type or "").strip().lower() in ("intern", "internship", "trainee")
+        if not is_intern and (self.internship_duration is not None or self.internship_duration_unit is not None):
+            raise ValueError("An internship period can only be set for Intern employees.")
+        if self.internship_duration is not None:
+            unit = self.internship_duration_unit or "months"
+            self.internship_duration_unit = unit
+            if self.internship_duration > ev.INTERNSHIP_MAX[unit]:
+                raise ValueError(f"The internship period can be at most {ev.INTERNSHIP_MAX[unit]} {unit}.")
         for name in ("branch_name", "department_name", "designation_name"):
             value = getattr(self, name)
             if isinstance(value, str) and not value.strip():
@@ -1537,6 +1550,8 @@ class AttendanceRecordOut(BaseModel):
     # Raw stored status (status above is the read-time display override) --
     # what the dashboard's attendance counts tally.
     stored_status: str | None = None
+    # Approved leave covering this day: 'full' | 'morning' | 'afternoon' (None = no leave).
+    leave_day_part: str | None = None
     # M-13: the check-in verdict (present / early_in / late), kept even
     # after check-out changes `status`.
     arrival_status: str | None = None
@@ -2341,6 +2356,9 @@ class PayrollReimbursementItemOut(BaseModel):
     request_code: str
     type_label: str
     approved_amount: float
+    # ISO 4217 code of approved_amount (an expense report keeps the currency it
+    # was entered in; only company-currency ones can go into payroll).
+    currency_code: str = "INR"
     approval_date: datetime.datetime | None
     target_period_month: int | None
     target_period_year: int | None
@@ -2567,12 +2585,30 @@ class OfferLetterHtmlTemplateUpdate(BaseModel):
     is_active: bool = True
 
 
+class InternOfferLetterPreviewRequest(BaseModel):
+    """Live Preview of an Intern Offer Letter against one real intern
+    (employee) -- or, as before, one real offer."""
+    html_body: str = Field(min_length=1)
+    css_styles: str = ""
+    employee_id: uuid.UUID | None = None
+    offer_id: uuid.UUID | None = None
+
+
+class InternOfferLettersGenerate(BaseModel):
+    employee_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+    # The editor's current (possibly unsaved) template; omitted = the active one.
+    html_body: str | None = None
+    css_styles: str = ""
+
+
 class OfferLetterHtmlTemplatePreviewRequest(BaseModel):
     html_body: str = Field(min_length=1)
     css_styles: str = ""
     # Real offer to substitute actual candidate/offer data from -- Live
     # Preview never fabricates sample values.
-    offer_id: uuid.UUID
+    offer_id: uuid.UUID | None = None
+    # ...or a real employee (e.g. no recruitment offers exist yet).
+    employee_id: uuid.UUID | None = None
 
 
 class OfferLetterHtmlTemplatePreviewOut(BaseModel):
@@ -4156,6 +4192,9 @@ class ExpenseLineItemCreate(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     # M-18: hcm_expense_claim_lines.amount is NUMERIC(14,2).
     amount: float = Field(gt=0, le=MAX_NUMERIC_14_2)
+    # ISO 4217 code the amount is entered in (currencies.CURRENCIES); omitted =
+    # the report's currency. Never converted.
+    currency_code: str | None = Field(default=None, max_length=3)
     # This expense's receipt / invoice: an attachment already uploaded to
     # this same expense report (kept when the report is edited). A new
     # receipt is uploaded after saving, with the row's line_index.
@@ -4204,6 +4243,9 @@ class ExpenseReportApiCreate(BaseModel):
     submitted_date: datetime.date = Field(default_factory=datetime.date.today)
     # At least one expense is needed to SUBMIT; a draft may have none.
     items: list[ExpenseLineItemCreate] = Field(default_factory=list, max_length=200)
+    # Currency of the whole report (every expense, tax and the net total);
+    # omitted = the first expense's currency, else INR. Never converted.
+    currency_code: str | None = Field(default=None, max_length=3)
     # Expenses & Advances / Accounting / More Info tabs.
     expense_approver_id: uuid.UUID | None = None
     posting_date: datetime.date | None = None
@@ -4228,6 +4270,19 @@ class ExpenseReportApiCreate(BaseModel):
 
     @model_validator(mode="after")
     def _check_total_and_date(self):
+        # One currency per report: amounts in different currencies are never
+        # added together (and never converted).
+        from . import currencies as _cur
+
+        try:
+            codes = {_cur.normalize_code(i.currency_code) for i in self.items if i.currency_code}
+            report = _cur.normalize_code(self.currency_code)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+        if report is not None:
+            codes.add(report)
+        if len(codes) > 1:
+            raise ValueError("All expenses in one report must use the same currency")
         # M-18: the report total lands in hcm_expense_claims.total_amount NUMERIC(14,2).
         if sum(i.amount for i in self.items) > MAX_NUMERIC_14_2:
             raise ValueError("The expense report total is too large")
@@ -4252,6 +4307,7 @@ class ExpenseLineItemOut(BaseModel):
     category: str | None
     description: str | None
     amount: float
+    currency_code: str = "INR"
     claim_type_id: uuid.UUID | None = None
     # The receipt / invoice uploaded for this one expense (None = none).
     receipt: AttachmentOut | None = None
@@ -4280,6 +4336,8 @@ class ExpenseReportOut(BaseModel):
     id: uuid.UUID
     employee_id: uuid.UUID
     reference: str | None
+    # ISO 4217 code of every amount below (items, taxes, totals) -- never converted.
+    currency_code: str = "INR"
     claim_date: datetime.date
     status: str
     items: list[ExpenseLineItemOut]

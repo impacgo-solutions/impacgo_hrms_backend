@@ -143,8 +143,9 @@ def run_tenant(slug: str, *, force: bool = False) -> dict:
             # LOP reads). HRMS tenants only; idempotent (app/attendance_rules.py).
             try:
                 from . import attendance_rules, auth_state
-                if auth_state.is_hrms_tenant(db, slug) and any(
-                        attendance_rules.mark_absences(db, company.id).values()):
+                if auth_state.is_hrms_tenant(db, slug) and (
+                        any(attendance_rules.mark_absences(db, company.id).values())
+                        | any(attendance_rules.sync_leave_attendance(db, company.id).values())):
                     db.commit()
                 else:
                     db.rollback()

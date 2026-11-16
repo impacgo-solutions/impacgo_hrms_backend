@@ -572,6 +572,8 @@ def create_employee(
             raise HTTPException(status_code=422, detail=f"{', '.join(missing)} {verb} required.")
         if payload.contract_end_date < crud.company_today(db, company.id):
             raise HTTPException(status_code=422, detail="The contract end date can't be in the past.")
+    if employment_type == "Intern" and payload.internship_duration is None:
+        raise HTTPException(status_code=422, detail="Internship Period is required for an Intern.")
     if employment_type not in ("Freelancer", "Contract"):
         field_errors = crud.validate_against_field_rules(
             db, company.id, "employee", payload.model_dump(),
@@ -608,6 +610,11 @@ def create_employee(
             employee.contract_start_date = payload.contract_start_date
             employee.contract_end_date = payload.contract_end_date
             employee.contract_status = "active"
+        if employment_type == "Intern" and payload.internship_duration is not None:
+            employee.internship_duration = payload.internship_duration
+            employee.internship_duration_unit = payload.internship_duration_unit
+            employee.internship_end_date = ev.internship_end_date(
+                employee.date_of_joining, payload.internship_duration, payload.internship_duration_unit)
         if payload.rate_amount is not None:
             crud.set_employee_rate(
                 db, company.id, employee, payload.rate_amount, payload.rate_unit or "hourly",

@@ -416,8 +416,27 @@ def allowed_expense_approver_ids(db: Session, employee: models.Employee) -> set[
     return ids
 
 
+def company_currency(db: Session, company_id: uuid.UUID) -> str:
+    """The company's base currency (General Settings), 'INR' when unset --
+    what payroll pays in and what employee advances are recorded in."""
+    return crud.company_base_currency(db, company_id)
+
+
+def report_currency(p: schemas.ExpenseReportApiCreate) -> str:
+    """The ISO 4217 code every amount of this report is entered in: the
+    report's own pick, else its expenses' (the schema guarantees they agree),
+    else INR. Amounts are stored as entered -- never converted."""
+    from . import currencies
+
+    code = currencies.normalize_code(p.currency_code) or next(
+        (currencies.normalize_code(i.currency_code) for i in p.items if i.currency_code), None)
+    return code or "INR"
+
+
 class ClaimTotals:
-    def __init__(self, lines_total: float, taxes: list[dict], tax_total: float, advances: list[tuple], advance_total: float):
+    def __init__(self, lines_total: float, taxes: list[dict], tax_total: float, advances: list[tuple], advance_total: float,
+                 currency: str = "INR"):
+        self.currency = currency
         self.lines_total, self.taxes, self.tax_total = lines_total, taxes, tax_total
         self.advances, self.advance_total = advances, advance_total
         self.grand_total = money(lines_total + tax_total)
@@ -451,6 +470,12 @@ def compute_claim(
     if grand > schemas.MAX_NUMERIC_14_2:
         _bad("The expense report total is too large")
 
+    currency = report_currency(p)
+    if p.advances and currency != company_currency(db, company_id):
+        # Advances are paid and recorded in the company currency; netting them
+        # off a report in another currency would need a conversion.
+        _bad(f"Advances can only be applied to a report in {company_currency(db, company_id)}. "
+             f"Remove the advances or enter this report in {company_currency(db, company_id)}.", 422)
     advances, advance_total = [], 0.0
     for a in p.advances:
         adv = db.get(models.EmployeeAdvance, a.advance_id)
@@ -465,7 +490,7 @@ def compute_claim(
     advance_total = money(advance_total)
     if advance_total > grand + 0.001:
         _bad(f"The advances applied ({advance_total:.2f}) are more than the report total ({grand:.2f}).")
-    return ClaimTotals(lines_total, taxes, tax_total, advances, advance_total)
+    return ClaimTotals(lines_total, taxes, tax_total, advances, advance_total, currency)
 
 
 def check_claim_links(
@@ -539,6 +564,7 @@ def apply_claim(
     claim.task_id, claim.travel_request_id = p.task_id, p.travel_request_id
     if can_set_payment_fields:
         claim.is_paid, claim.clearance_date = p.is_paid, p.clearance_date
+    claim.currency_code = totals.currency
     claim.total_claimed, claim.total_taxes = totals.lines_total, totals.tax_total
     claim.advance_amount, claim.total_amount = totals.advance_total, totals.net_payable
     types = claim_types_for(db, claim.company_id, claim.id if editing else None)
@@ -547,7 +573,7 @@ def apply_claim(
             id=uuid.uuid4(), claim_id=claim.id, sort_order=i, expense_date=it.date,
             category=types[it.category.lower()].name if it.category else None,
             claim_type_id=types[it.category.lower()].id if it.category else None,
-            description=it.description, amount=money(it.amount),
+            description=it.description, amount=money(it.amount), currency_code=totals.currency,
             receipt_attachment_id=it.receipt_attachment_id)
         for i, it in enumerate(p.items)
     ]
@@ -631,10 +657,10 @@ def expense_report_out(
             advance_amount=float(adv.advance_amount) if adv else None))
     return schemas.ExpenseReportOut(
         id=claim.id, employee_id=claim.employee_id, reference=claim.purpose, claim_date=claim.claim_date,
-        status=claim.status,
+        currency_code=claim.currency_code or "INR", status=claim.status,
         items=[schemas.ExpenseLineItemOut(
             expense_date=l.expense_date, category=l.category, description=l.description, amount=float(l.amount),
-            claim_type_id=l.claim_type_id, receipt=receipts.get(l.receipt_attachment_id))
+            currency_code=l.currency_code or claim.currency_code or "INR", claim_type_id=l.claim_type_id, receipt=receipts.get(l.receipt_attachment_id))
             for l in sorted(claim.lines, key=lambda l: l.sort_order or 0)],
         approver_id=claim.approver_id, approver_name=name(claim.approver_id), decision_notes=claim.decision_notes,
         decided_at=claim.decided_at,

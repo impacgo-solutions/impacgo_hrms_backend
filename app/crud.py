@@ -3184,6 +3184,30 @@ def department_display_name(db: Session, department_id: uuid.UUID | None) -> str
     return department.name if department is not None else "—"
 
 
+def company_base_currency(db: Session, company_id: uuid.UUID) -> str:
+    """The company's base currency (General Settings > default currency),
+    'INR' when unset: what payroll pays in. Expense reports entered in any
+    other currency are never converted into it."""
+    code = db.scalar(select(models.CompanySettings.default_currency).where(
+        models.CompanySettings.company_id == company_id))
+    return (code or "INR").strip().upper()[:3] or "INR"
+
+
+def _expense_money(amount: float | None, currency_code: str | None) -> str:
+    """An expense amount in the currency it was entered in (never converted):
+    rupees keep the existing compact INR style, every other currency shows its
+    own symbol with the exact amount ("$1,250.00", "AED 4,000.00")."""
+    if (currency_code or "INR") == "INR":
+        return format_inr_budget(amount)
+    from . import currencies as _cur
+
+    if amount is None:
+        return "—"
+    number = f"{float(amount):,.2f}"
+    sym = _cur.symbol(currency_code)
+    return f"{sym} {number}" if sym.isalpha() else f"{sym}{number}"
+
+
 def format_inr_budget(amount: float | None) -> str:
     if amount is None:
         return "—"
@@ -6280,7 +6304,7 @@ def clock_in_out(
         db.flush()
     else:
         _ensure_sessions(db, record)
-        if record.source == "auto_absent":
+        if record.source in ("auto_absent", "auto_leave"):
             record.source = "web"
 
     if first_punch:
@@ -6601,6 +6625,51 @@ def _effective_attendance_status(record: models.AttendanceRecord) -> str:
     return record.status
 
 
+_LEAVE_OVERRIDABLE_STATUSES = ("absent", "missing_checkin", "missing_checkout")
+
+
+def overlay_approved_leave(db: Session, items: list[dict]) -> list[dict]:
+    """Read-time only (nothing is written): marks listed attendance rows that
+    fall on a day of FINAL-approved leave. `leave_day_part` becomes 'full' /
+    'morning' / 'afternoon' for every covered row, and a row that would show
+    Absent or Missing Check-In/Out is displayed as 'on_leave' instead --
+    leave explains the gap. A row with real punches that is not
+    absent/missing (present, late, ...) keeps its status: the employee
+    worked. Pending / rejected / cancelled / withdrawn leave is ignored,
+    matching get_blocking_leave_window. `stored_status` is left untouched, so
+    the dashboard / payroll aggregates still tally the stored rows."""
+    if not items:
+        return items
+    emp_ids = {i["employee_id"] for i in items}
+    dates = [i["attendance_date"] for i in items]
+    leaves = db.execute(
+        select(models.LeaveRequest.employee_id, models.LeaveRequest.from_date, models.LeaveRequest.to_date,
+               models.LeaveRequest.is_half_day, models.LeaveRequest.half_day_period).where(
+            models.LeaveRequest.employee_id.in_(emp_ids),
+            models.LeaveRequest.status == "approved",
+            models.LeaveRequest.from_date <= max(dates),
+            models.LeaveRequest.to_date >= min(dates),
+        )
+    ).all()
+    if not leaves:
+        return items
+    by_emp: dict = {}
+    for lv in leaves:
+        by_emp.setdefault(lv.employee_id, []).append(lv)
+    for item in items:
+        parts = set()
+        for lv in by_emp.get(item["employee_id"], ()):
+            if lv.from_date <= item["attendance_date"] <= lv.to_date:
+                parts.add(lv.half_day_period if lv.is_half_day and lv.half_day_period in ("morning", "afternoon") else "full")
+        if not parts:
+            continue
+        part = "full" if ("full" in parts or len(parts) > 1) else next(iter(parts))
+        item["leave_day_part"] = part
+        if item["status"] in _LEAVE_OVERRIDABLE_STATUSES:
+            item["status"] = "on_leave"
+    return items
+
+
 def serialize_attendance_record(record: models.AttendanceRecord) -> dict:
     """AttendanceRecordOut payload, denormalized with the employee's name/
     code/branch straight off `record.employee` -- lets the Daily
@@ -6660,6 +6729,7 @@ def serialize_attendance_record(record: models.AttendanceRecord) -> dict:
         # left open past the allowed length is a missing clock-out, not
         # "clocked in").
         "clocked_in": _has_live_session(sessions),
+        "leave_day_part": None,
     }
 
 
@@ -6803,7 +6873,7 @@ def list_attendance_records(
         if has_more and last is not None
         else None
     )
-    items = [serialize_attendance_record(r) for r in page_rows]
+    items = overlay_approved_leave(db, [serialize_attendance_record(r) for r in page_rows])
     return {"items": items, "next_cursor": next_cursor, "has_more": has_more}
 
 
@@ -6820,6 +6890,7 @@ ATTENDANCE_SORT_KEYS = (
 _ATTENDANCE_STATUS_LABELS = {
     "present": "On Time", "absent": "Absent", "late": "Late Check-In",
     "early_in": "Early Check-In", "off_shift": "Off Shift", "regularized": "Regularized",
+    "on_leave": "On Leave",
     "missing_checkin": "Missing Check-In", "missing_checkout": "Missing Check-Out",
 }
 
@@ -6956,7 +7027,7 @@ def _sorted_attendance_page(
     page_rows = rows[:limit]
     next_cursor = encode_cursor(f"o{offset + len(page_rows)}", uuid.UUID(int=0)) if has_more else None
     return {
-        "items": [serialize_attendance_record(r) for r in page_rows],
+        "items": overlay_approved_leave(db, [serialize_attendance_record(r) for r in page_rows]),
         "next_cursor": next_cursor,
         "has_more": has_more,
     }
@@ -7511,6 +7582,7 @@ def create_audit_log(
     document_id: uuid.UUID | None = None,
     ip_address: str | None = None,
     changes: dict | None = None,
+    flush: bool = True,
 ) -> models.AuditLog:
     """Best-effort: called from within an endpoint's own db.commit(), never
     the reason a request fails -- callers wrap this in a try/except.
@@ -7539,7 +7611,8 @@ def create_audit_log(
         created_at=datetime.datetime.now(datetime.timezone.utc),
     )
     db.add(log)
-    db.flush()
+    if flush:
+        db.flush()
     return log
 
 
@@ -7748,14 +7821,16 @@ def _request_entity_details(db: Session, entity_type: str, entity_id: uuid.UUID)
             "Expense ID": row.claim_no,
             "Claim Date": _fmt_req_date(row.claim_date),
             "Purpose": row.purpose or "—",
-            "Total Amount": format_inr_budget(row.total_amount),
+            "Total Amount": _expense_money(row.total_amount, row.currency_code),
         }
+        if (row.currency_code or "INR") != "INR":
+            details["Currency"] = row.currency_code
         lines = db.scalars(
             select(models.ExpenseClaimLine).where(models.ExpenseClaimLine.claim_id == row.id)
         ).all()
         if lines:
             details["Line Items"] = "; ".join(
-                f"{line.category or line.description or 'Item'}: {format_inr_budget(line.amount)}"
+                f"{line.category or line.description or 'Item'}: {_expense_money(line.amount, line.currency_code or row.currency_code)}"
                 for line in lines
             )
         return details
@@ -9334,6 +9409,7 @@ def identify_reimbursements_for_period(
     }
     now = datetime.datetime.now(datetime.timezone.utc)
     created = 0
+    base_currency = company_base_currency(db, company_id)
     for component in wanted:
         source_type = component["source_type"]
         if source_type == "travel_request":
@@ -9355,6 +9431,10 @@ def identify_reimbursements_for_period(
                     models.Employee.company_id == company_id,
                     models.Employee.is_active.is_(True),
                     models.ExpenseClaim.status == "approved",
+                    # Payroll pays in the company currency only: a report entered
+                    # in another currency is never converted -- HR settles it
+                    # outside payroll.
+                    models.ExpenseClaim.currency_code == base_currency,
                 )
             ).all()
         cap = component["max_amount_per_request"]
@@ -9594,6 +9674,8 @@ def create_payroll_reimbursement_inclusion(
         return None
     if row.status != "approved":
         return "not_approved"
+    if source_type == "expense_claim" and (row.currency_code or "INR") != company_base_currency(db, company_id):
+        return "foreign_currency"
     already = db.scalar(
         select(models.PayrollReimbursementInclusion).where(
             models.PayrollReimbursementInclusion.source_type == source_type,
@@ -9656,6 +9738,7 @@ def list_payroll_reimbursement_items(db: Session, company_id: uuid.UUID) -> list
             "request_code": travel.request_no or f"TRV-{travel.id.hex[:8].upper()}",
             "type_label": _reimbursement_type_label("travel_request"),
             "approved_amount": float(travel.estimated_cost or 0),
+            "currency_code": company_base_currency(db, company_id),
             "approval_date": travel.decided_at,
         })
 
@@ -9682,6 +9765,7 @@ def list_payroll_reimbursement_items(db: Session, company_id: uuid.UUID) -> list
             "request_code": claim.claim_no,
             "type_label": _reimbursement_type_label("expense_claim", claim.claim_no),
             "approved_amount": float(claim.total_amount or 0),
+            "currency_code": claim.currency_code or "INR",
             "approval_date": claim.decided_at,
         })
 
@@ -10684,6 +10768,48 @@ def get_employee_salary_structure(db: Session, employee_id: uuid.UUID) -> dict |
     ]
 
     return {"structure_name": structure.name, "components": components}
+
+
+def projected_salary_slip_detail(db: Session, employee_id: uuid.UUID) -> dict | None:
+    """A payslip detail (same shape as get_salary_slip_detail) projected from
+    the employee's assigned salary structure for the current month -- the
+    real configured monthly amounts, full month, no LOP -- else one "Monthly
+    CTC" line from the employee's annual CTC, else no lines (amounts 0, the
+    employee's real details only). Used by the Payslip Template preview for
+    employees with no generated payslip yet (e.g. someone just added)."""
+    import calendar as _calendar
+    from types import SimpleNamespace as _NS
+
+    structure = get_employee_salary_structure(db, employee_id)
+    employee = db.get(models.Employee, employee_id)
+    if employee is None:
+        return None
+    lines = []
+    if structure is not None:
+        source = "structure"
+        for c in structure["components"]:
+            ctype = str(c["type"]).strip().lower().replace(" ", "_")
+            monthly = round(float(c["amount"] or 0) / 12, 2)
+            lines.append({"component_id": None, "name": c["name"], "component_type": ctype,
+                          "amount": monthly, "ytd_amount": monthly})
+    elif getattr(employee, "annual_ctc", None):
+        # No structure: the employee's own annual CTC, as one monthly line.
+        source = "ctc"
+        monthly = round(float(employee.annual_ctc) / 12, 2)
+        lines.append({"component_id": None, "name": "Monthly CTC", "component_type": "earning",
+                      "amount": monthly, "ytd_amount": monthly})
+    else:
+        # No salary data at all: the employee's real details, amounts 0.
+        source = "none"
+    gross = sum(l["amount"] for l in lines if l["component_type"] == "earning")
+    deductions = sum(l["amount"] for l in lines if l["component_type"] in ("deduction", "tax"))
+    today = employee_company_today(db, employee_id)
+    days = _calendar.monthrange(today.year, today.month)[1]
+    run = _NS(period_month=today.month, period_year=today.year,
+              from_date=today.replace(day=1), to_date=today.replace(day=days))
+    slip = _NS(working_days=days, lop_days=0, gross_pay=gross, net_pay=round(gross - deductions, 2))
+    return {"slip": slip, "run": run, "employee": employee, "lines": lines, "reimbursements": [],
+            "projected": source}
 
 
 def list_payroll_runs(db: Session, company_id: uuid.UUID) -> list[models.PayrollRun]:
@@ -15409,6 +15535,10 @@ def get_employee_professional(db: Session, employee_id: uuid.UUID) -> "dict | No
         "workMode": _dash(e.work_mode),
         "shift": shift_name,
         "doj": _iso(e.date_of_joining),
+        # Intern employees: "3 months" / "45 days" and the computed last day.
+        "internshipPeriod": (f"{e.internship_duration} {e.internship_duration_unit}"
+                             if getattr(e, "internship_duration", None) else "—"),
+        "internshipEndDate": _iso(getattr(e, "internship_end_date", None)),
         "confirmationDate": _iso(e.confirmation_date),
         "probationEnd": _iso(e.probation_end_date),
         "status": e.status,

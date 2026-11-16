@@ -282,6 +282,11 @@ class Employee(Base):
     # ISO 4217 code of the rate above (backend/db/add_freelancer_onboarding.sql);
     # NULL = the company's default currency (every rate set before this).
     contract_rate_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # Intern employees only (backend/db/add_employee_internship_period.sql):
+    # the internship period (N days / months) and its computed last day.
+    internship_duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    internship_duration_unit: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    internship_end_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
     # Contract expiry (backend/db/add_contract_expiry.sql); NULL for
     # non-contract employees. status: 'active' | 'expired'; an expired
     # contract blocks login (access_lifecycle.contract_access_blocked) until
@@ -1300,6 +1305,9 @@ class ExpenseClaim(Base):
     claim_date: Mapped[datetime.date] = mapped_column(Date)
     purpose: Mapped[str | None] = mapped_column(String(200), nullable=True)
     total_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
+    # ISO 4217 code of every amount on the report (lines, taxes, total) --
+    # backend/db/add_expense_claim_currency.sql. Never converted.
+    currency_code: Mapped[str] = mapped_column(String(3), default="INR")
     status: Mapped[str] = mapped_column(String(12), default="draft")
     approver_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("core_employees.id"), nullable=True
@@ -1359,6 +1367,7 @@ class ExpenseClaimLine(Base):
     expense_date: Mapped[datetime.date] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     amount: Mapped[float] = mapped_column(Numeric(14, 2))
+    currency_code: Mapped[str] = mapped_column(String(3), default="INR")
 
     # -- Manual addition (backend/db/manual_schema_additions.sql section 9) --
     category: Mapped[str | None] = mapped_column(String(40), nullable=True)

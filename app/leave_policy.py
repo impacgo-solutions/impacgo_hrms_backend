@@ -497,6 +497,8 @@ def auto_approve(db: Session, requests: list[models.LeaveRequest], actor: models
         from . import attendance_rules
 
         attendance_rules.clear_auto_absences(db, r.employee_id, r.from_date, r.to_date)
+        attendance_rules.sync_leave_attendance(
+            db, r.company_id, employee_ids=[r.employee_id], from_date=r.from_date, to_date=r.to_date)
         approval_engine.close_request(db, r.company_id, "leave_request", r.id, actor,
                                       status="approved", comments=AUTO_APPROVE_NOTE)
         crud.create_audit_log(db, r.company_id, actor.id, "auto_approve", "leave_request", r.id,

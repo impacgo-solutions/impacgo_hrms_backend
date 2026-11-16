@@ -53,6 +53,7 @@ def recent_duplicate(
     claim_date: datetime.date,
     purpose: str | None,
     total: float,
+    currency: str | None = None,
 ) -> models.ExpenseClaim | None:
     since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=DUPLICATE_WINDOW_SECONDS)
     # Reimbursements are always "REIM-..."; an expense report's ID follows the
@@ -68,6 +69,8 @@ def recent_duplicate(
             models.ExpenseClaim.claim_date == claim_date,
             models.ExpenseClaim.purpose == purpose,
             models.ExpenseClaim.total_amount == round(float(total), 2),
+            # 100 INR and 100 USD are different reports.
+            *([models.ExpenseClaim.currency_code == currency] if currency else []),
             models.ExpenseClaim.status == "pending",
             models.ExpenseClaim.created_at >= since,
         ).order_by(models.ExpenseClaim.created_at.desc()).limit(1)

@@ -342,3 +342,86 @@ def build_placeholders(db: Session, detail: dict, company) -> dict[str, str]:
 
 def render(html_body: str, css_styles: str, placeholders: dict[str, str]) -> str:
     return tr.render_template_html(html_body, css_styles, placeholders, verbatim_keys=olr.VERBATIM_KEYS)
+
+
+# ── Employee-based generation (Documents > Templates > Intern Offer Letter) ──
+
+_INTERN_TYPES = {"intern", "internship", "trainee"}
+
+
+def is_intern_type(value: str | None) -> bool:
+    """True for the Intern employment type however it is stored
+    ("Intern", "intern", "internship", ...). Never matches full-time etc."""
+    return (value or "").strip().lower().replace("-", "_").replace(" ", "_") in _INTERN_TYPES
+
+
+def list_interns(db: Session, company_id: uuid.UUID) -> list[models.Employee]:
+    """Every active employee of the company whose employment type is Intern
+    -- queried on each call, so newly created interns appear immediately and
+    a changed employment type drops out."""
+    rows = db.scalars(
+        select(models.Employee)
+        .where(models.Employee.company_id == company_id, models.Employee.is_active.is_(True))
+        .order_by(models.Employee.first_name, models.Employee.last_name)
+    ).all()
+    return [e for e in rows if is_intern_type(e.employment_type)]
+
+
+def employee_label(e: models.Employee) -> str:
+    return " ".join(p for p in (_clean(e.first_name), _clean(e.last_name)) if p) or "Intern"
+
+
+def employee_offer_detail(db: Session, employee: models.Employee, *, intern: bool) -> dict:
+    """An offer-shaped detail (see crud.get_offer_detail) built from a real
+    employee record, so the Offer / Intern Offer Letter templates can be
+    previewed and generated for employees too -- joining / end date,
+    designation, department, branch, reporting manager, CTC or contract
+    rate, education. Never sample values: missing data renders as "—"."""
+    from types import SimpleNamespace as NS
+
+    designation = db.get(models.Designation, employee.designation_id) if employee.designation_id else None
+    department = db.get(models.Department, employee.department_id) if employee.department_id else None
+    branch = db.get(models.Branch, employee.branch_id) if getattr(employee, "branch_id", None) else None
+    manager = db.get(models.Employee, employee.reporting_manager_id) if employee.reporting_manager_id else None
+    edu = db.scalars(
+        select(models.EmployeeEducation).where(models.EmployeeEducation.employee_id == employee.id)
+        .order_by(models.EmployeeEducation.year_of_passing.desc().nullslast())
+    ).first()
+    college = None
+    if edu is not None:
+        college = ", ".join(p for p in (_clean(edu.qualification), _clean(edu.institute)) if p) or None
+    raw_type = (employee.employment_type or "").strip().lower().replace("-", "_").replace(" ", "_")
+    etype = "intern" if intern else (raw_type or "full_time")
+    title = _clean(designation.name if designation else None) or ("Intern" if intern else "—")
+    rate, unit = employee.contract_rate_amount, employee.contract_rate_unit
+    if intern:
+        # A monthly rate on the intern's record is the stipend; none = unpaid.
+        ctc = float(rate) * 12 if rate is not None and unit == "monthly" else None
+    else:
+        ctc = float(employee.annual_ctc) if getattr(employee, "annual_ctc", None) else None
+    offer = NS(
+        offered_ctc=ctc, status="accepted", employment_type=etype, designation=title,
+        work_mode=_clean(employee.work_mode), probation_months=None, notice_period_days=None,
+        working_hours=None, expiry_date=None, benefits=None, salary_breakup=None, terms=None,
+        offer_date=datetime.date.today(), proposed_joining_date=employee.date_of_joining,
+        contract_end_date=(getattr(employee, "internship_end_date", None) if intern else None) or employee.contract_end_date,
+        contract_duration_months=(employee.internship_duration
+                                  if intern and getattr(employee, "internship_duration_unit", None) == "months" else None),
+        rate_amount=rate, rate_unit=unit,
+    )
+    candidate = NS(
+        name=employee_label(employee),
+        email=_clean(employee.work_email) or _clean(getattr(employee, "personal_email", None)),
+        phone=_clean(employee.personal_phone), qualification=college,
+    )
+    opening = NS(title=title, employment_type=etype, work_mode=_clean(employee.work_mode))
+    return {
+        "offer": offer, "application": None, "candidate": candidate, "opening": opening,
+        "department": department, "designation": designation, "branch": branch,
+        "reporting_manager": manager, "hr_contact": None,
+    }
+
+
+def build_employee_placeholders(db: Session, employee: models.Employee, company) -> dict[str, str]:
+    """Intern Offer Letter placeholders for an intern employee."""
+    return build_placeholders(db, employee_offer_detail(db, employee, intern=True), company)

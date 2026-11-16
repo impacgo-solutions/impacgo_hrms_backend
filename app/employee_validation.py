@@ -205,6 +205,27 @@ def as_date(value: str | None) -> datetime.date | None:
     return parse_date_text(value) if value else None
 
 
+INTERNSHIP_MAX = {"days": 730, "months": 24}
+
+
+def internship_end_date(start: datetime.date, duration: int, unit: str) -> datetime.date:
+    """Last day of an internship of [duration] days / months starting on
+    [start] (inclusive): 30 days from 1 Jun ends 30 Jun; 3 months from
+    1 Jun ends 31 Aug; 1 month from 31 Jan ends 28/29 Feb (the
+    target month's last day when it is shorter)."""
+    import calendar
+
+    if unit == "days":
+        return start + datetime.timedelta(days=duration - 1)
+    y, m = divmod(start.month - 1 + duration, 12)
+    y, m = start.year + y, m + 1
+    last = calendar.monthrange(y, m)[1]
+    if start.day > last:
+        # The target month is shorter (31 Jan + 1 month): its last day.
+        return datetime.date(y, m, last)
+    return datetime.date(y, m, start.day) - datetime.timedelta(days=1)
+
+
 def joining_date_error(doj: datetime.date | None, today: datetime.date | None = None) -> str | None:
     if doj is None:
         return None

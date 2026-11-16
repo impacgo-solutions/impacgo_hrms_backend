@@ -32,6 +32,7 @@ MAX_OPEN_SESSION_HOURS = 20
 # downtime and leave / regularization decided a few days late.
 ABSENCE_LOOKBACK_DAYS = 3
 AUTO_ABSENT_SOURCE = "auto_absent"
+AUTO_LEAVE_SOURCE = "auto_leave"
 
 
 # ── who may do what ─────────────────────────────────────────────────────────
@@ -196,11 +197,90 @@ def clear_auto_absences(db: Session, employee_id: uuid.UUID,
     return len(rows)
 
 
+def sync_leave_attendance(db: Session, company_id: uuid.UUID, *,
+                          employee_ids: list[uuid.UUID] | None = None,
+                          from_date: datetime.date | None = None,
+                          to_date: datetime.date | None = None) -> dict:
+    """Daily Attendance shows FINAL-approved leave as 'on_leave' (full-day and
+    half-day) for the leave's working days up to today. For every such day on
+    which the employee has NO attendance record, one 'on_leave' row (source
+    auto_leave) is created -- the (employee_id, attendance_date) unique index
+    plus the existence check below make a duplicate impossible, and a real
+    record (punches, regularization, manual / imported, auto-absent) is never
+    modified. Rows the sync itself created are removed again once no approved
+    leave covers the day (rejected / cancelled / withdrawn) -- unless the
+    employee has since punched or the row was edited (source changes then).
+    Idempotent. Half-day leave is rendered at read time (crud.
+    overlay_approved_leave -> leave_day_part). Caller commits."""
+    # The session runs with autoflush off: push a just-changed leave status
+    # (approved -> withdrawn / rejected / cancelled) so the queries below see it.
+    db.flush()
+    today = crud.company_today(db, company_id)
+    if from_date is not None and to_date is not None:
+        start, end = max(from_date, today - datetime.timedelta(days=400)), min(to_date, today)
+    else:
+        start, end = today - datetime.timedelta(days=ABSENCE_LOOKBACK_DAYS), today
+    result = {"created": 0, "removed": 0}
+    if end < start:
+        return result
+    emp_q = select(models.Employee).where(models.Employee.company_id == company_id)
+    if employee_ids is not None:
+        emp_q = emp_q.where(models.Employee.id.in_(employee_ids))
+    employees = {e.id: e for e in db.scalars(emp_q).all()}
+    if not employees:
+        return result
+    leaves = db.execute(select(models.LeaveRequest.employee_id, models.LeaveRequest.from_date,
+                               models.LeaveRequest.to_date).where(
+        models.LeaveRequest.employee_id.in_(list(employees)),
+        models.LeaveRequest.status == "approved",
+        models.LeaveRequest.from_date <= end, models.LeaveRequest.to_date >= start)).all()
+    covered: dict = {}
+    for lv in leaves:
+        d = max(lv.from_date, start)
+        while d <= min(lv.to_date, end):
+            covered.setdefault(lv.employee_id, set()).add(d)
+            d += datetime.timedelta(days=1)
+    records = {(r.employee_id, r.attendance_date): r for r in db.scalars(select(models.AttendanceRecord).where(
+        models.AttendanceRecord.employee_id.in_(list(employees)),
+        models.AttendanceRecord.attendance_date >= start, models.AttendanceRecord.attendance_date <= end)).all()}
+    off = weekly_off.company_off_weekdays(db, company_id)
+    holidays = db.execute(select(models.Holiday.holiday_date, models.Holiday.branch_id).where(
+        models.Holiday.company_id == company_id, models.Holiday.holiday_date >= start,
+        models.Holiday.holiday_date <= end, models.Holiday.is_optional.is_not(True))).all()
+
+    def non_working(e, d) -> bool:
+        return weekly_off.is_off(d, off) or any(
+            h.holiday_date == d and (h.branch_id is None or h.branch_id == e.branch_id) for h in holidays)
+
+    for eid, e in employees.items():
+        days = covered.get(eid, set())
+        for d in sorted(days):
+            if (eid, d) in records or non_working(e, d):
+                continue
+            if e.date_of_joining is not None and d < e.date_of_joining:
+                continue
+            db.add(models.AttendanceRecord(
+                id=uuid.uuid4(), company_id=company_id, employee_id=eid, attendance_date=d,
+                status="on_leave", source=AUTO_LEAVE_SOURCE))
+            result["created"] += 1
+    for (eid, d), rec in records.items():
+        if (rec.source == AUTO_LEAVE_SOURCE and rec.status == "on_leave" and rec.check_in is None
+                and rec.check_out is None and not float(rec.overtime_hours or 0)
+                and d not in covered.get(eid, set())):
+            db.delete(rec)
+            result["removed"] += 1
+    db.flush()
+    return result
+
+
 def recheck_absences(db: Session, company_id: uuid.UUID, employee_id: uuid.UUID,
                      from_date: datetime.date, to_date: datetime.date) -> dict:
     """Re-judges past days of ONE employee in [from_date, to_date] -- after a
     leave covering them is rejected / cancelled / withdrawn, days it excused
-    while pending are marked absent again (beyond the nightly look-back)."""
+    while pending are marked absent again (beyond the nightly look-back).
+    Leave-synced 'on_leave' rows of that range are re-judged first."""
+    db.flush()  # autoflush is off: make the new leave status visible to both passes
+    sync_leave_attendance(db, company_id, employee_ids=[employee_id], from_date=from_date, to_date=to_date)
     return mark_absences(db, company_id, employee_ids=[employee_id], from_date=from_date, to_date=to_date)
 
 

@@ -312,12 +312,16 @@ def preview_agreement_html(
     payload: PreviewIn,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_hr_documents),
+    pdf: bool = False,
 ):
     """Live preview of unsaved HTML / CSS with sample freelancer values."""
     _check_html(payload.html_body, payload.css_styles)
     company = db.get(models.Company, current_user.company_id)
     values = agreements.placeholders_for(db, company, None, crud.company_today(db, company.id))
-    return RenderedOut(rendered_html=agreements.render(payload.html_body, payload.css_styles, values))
+    rendered = agreements.render(payload.html_body, payload.css_styles, values)
+    if pdf:
+        return template_rendering.preview_pdf_response(rendered, "agreement-preview.pdf")
+    return RenderedOut(rendered_html=rendered)
 
 
 @router.get("/agreement-templates/{template_id}/preview", response_model=RenderedOut)

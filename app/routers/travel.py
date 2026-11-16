@@ -1,14 +1,16 @@
+import re
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import crud, expense_claims, form_config, models, schemas, travel_expense as te
 from ..database import get_db
 from ..deps import DEFAULT_LIST_LIMIT, get_current_user, require_module_enabled
-from ..storage import delete_uploaded_file, save_uploaded_file
+from ..expense_report_pdf import render_expense_report_pdf
+from ..storage import delete_uploaded_file, save_uploaded_file, uploads_root, winlong_path
 
 router = APIRouter(
     prefix="/api", tags=["travel"],
@@ -520,7 +522,8 @@ def create_expense_report(
     reference = payload.reference or f"Expense claim {posting.strftime('%d %b %Y')}"
     if not payload.save_as_draft:
         existing = expense_claims.recent_duplicate(
-            db, company.id, payload.employee_id, te.SERIES_PREFIX, payload.submitted_date, reference, te.quick_net_total(payload))
+            db, company.id, payload.employee_id, te.SERIES_PREFIX, payload.submitted_date, reference, te.quick_net_total(payload),
+            te.report_currency(payload))
         if existing is not None:
             # M-21: a double-click / retry of the report just filed -- same
             # report back, no second row, audit entry or approver notification.
@@ -824,6 +827,39 @@ def delete_expense_attachment(
     delete_uploaded_file(a.file_url)
     crud.delete_attachment(db, a)
     db.commit()
+
+
+@router.get("/expense-reports/{claim_id}/download")
+def download_expense_report(
+    claim_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """The report as a PDF (details, rows, taxes, advances, approval trail,
+    attachment list + the receipts). Same visibility as viewing the report."""
+    claim = _load_claim(db, claim_id, current_user)
+    out = te.expense_report_out(db, claim, viewer=current_user)
+    out.payroll_status = crud.reimbursement_payroll_statuses(db, claim.company_id, "expense_claim", [claim]).get(claim.id)
+    company = db.get(models.Company, claim.company_id)
+    line_of = {l.receipt_attachment_id: (l.sort_order or 0) + 1 for l in claim.lines if l.receipt_attachment_id}
+    atts = []
+    for a in crud.list_attachments_for_entity(db, _EXPENSE_ENTITY, claim.id):
+        data = None
+        if a.file_url.startswith("/media/"):
+            path = winlong_path(uploads_root() / a.file_url.removeprefix("/media/"))
+            try:
+                data = path.read_bytes()
+            except OSError:
+                data = None
+        atts.append({"name": a.file_name, "mime": a.mime_type, "size": a.size_bytes,
+                     "line": line_of.get(a.id), "data": data})
+    pdf = render_expense_report_pdf(
+        out, company_name=company.name if company else "", attachments=atts,
+        history=te.history_for(db, claim.company_id, (_EXPENSE_ENTITY, "reimbursement"), claim.id),
+    )
+    name = re.sub(r"[^A-Za-z0-9._-]+", "_", out.series or out.reference or str(claim.id)[:8])
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="expense-report-{name}.pdf"'})
 
 
 @router.get("/expense-reports/{claim_id}/history")

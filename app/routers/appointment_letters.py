@@ -36,6 +36,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from .. import appointment_letters as al, crud, models, template_designs
+from .. import template_rendering as tr
 from ..database import get_db
 from ..deps import HR_DOCUMENT_COLUMNS, get_current_user, has_column_access, require_hr_documents
 from ..exit_letter_html_renderer import embed_letter_image
@@ -334,7 +335,7 @@ def _draft_image(data_url: str) -> str:
 
 @router.post("/appointment-letter-templates/preview", response_model=RenderedOut)
 def preview_template(payload: PreviewIn, db: Session = Depends(get_db),
-                     current_user: models.User = Depends(require_hr_documents)):
+                     current_user: models.User = Depends(require_hr_documents), pdf: bool = False):
     """The in-progress (unsaved) HTML/CSS rendered against a real employee."""
     _validate(payload.html_body, payload.css_styles)
     employee = _employee_for_hr(db, current_user, payload.employee_id)
@@ -351,7 +352,10 @@ def preview_template(payload: PreviewIn, db: Session = Depends(get_db),
                        ("authorized_signature", payload.signature_image_data_url)):
         if draft is not None:
             placeholders[key] = _draft_image(draft)
-    return RenderedOut(rendered_html=al.render(payload.html_body, payload.css_styles, placeholders))
+    rendered = al.render(payload.html_body, payload.css_styles, placeholders)
+    if pdf:
+        return tr.preview_pdf_response(rendered, f"appointment-letter-{employee.employee_code or employee.first_name}.pdf")
+    return RenderedOut(rendered_html=rendered)
 
 
 # ── per-employee letters ─────────────────────────────────────────────────────

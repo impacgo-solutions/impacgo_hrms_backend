@@ -519,3 +519,16 @@ def start_pdf_browser_check_in_background() -> None:
     """Runs check_pdf_browser off the event loop so app startup is never
     blocked or crashed by it (also warms the shared browser)."""
     threading.Thread(target=check_pdf_browser, name="pdf-render-check", daemon=True).start()
+
+
+def preview_pdf_response(rendered_html: str, filename: str):
+    """The Live Preview as a downloadable PDF -- the exact same rendered HTML
+    the preview pane shows, through the same Chromium pipeline as generated
+    documents (Documents > Templates > Preview > Download)."""
+    import re as _re
+
+    from fastapi import Response
+
+    safe = _re.sub(r"[^A-Za-z0-9._-]+", "-", filename).strip("-") or "preview.pdf"
+    return Response(content=render_html_to_pdf(rendered_html), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}"'})

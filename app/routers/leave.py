@@ -554,6 +554,9 @@ def update_leave_request(
             # Approved leave explains those days: drop any auto-absent
             # marks now, not at the next nightly pass (payroll LOP).
             attendance_rules.clear_auto_absences(db, req.employee_id, req.from_date, req.to_date)
+            # ...and Daily Attendance shows those days as On Leave.
+            attendance_rules.sync_leave_attendance(
+                db, req.company_id, employee_ids=[req.employee_id], from_date=req.from_date, to_date=req.to_date)
         elif req_old_status == "approved" and effective_status != "approved":
             crud.adjust_leave_allocation_used(
                 db, req.employee_id, req.leave_type_id, -float(req.days),

@@ -405,6 +405,7 @@ def activate_offer_letter_html_template(
 )
 def preview_offer_letter_html_template(
     payload: schemas.OfferLetterHtmlTemplatePreviewRequest,
+    pdf: bool = False,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(_require_recruitment_edit),
 ):
@@ -415,13 +416,25 @@ def preview_offer_letter_html_template(
     error = offer_letter_html_renderer.validate_template_html(payload.html_body, payload.css_styles)
     if error:
         raise HTTPException(status_code=400, detail=error)
-    detail = crud.get_offer_detail(db, payload.offer_id, company.id)
-    if detail is None:
-        raise HTTPException(status_code=404, detail="Offer not found")
+    if payload.offer_id is not None:
+        detail = crud.get_offer_detail(db, payload.offer_id, company.id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Offer not found")
+    elif payload.employee_id is not None:
+        employee = db.get(models.Employee, payload.employee_id)
+        if employee is None or employee.company_id != company.id:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        detail = intern_offer_letter.employee_offer_detail(db, employee, intern=False)
+    else:
+        raise HTTPException(status_code=422, detail="Select an offer or an employee to preview against.")
     placeholders = offer_letter_html_renderer.build_offer_letter_placeholders(detail, company)
     rendered = offer_letter_html_renderer.render_offer_letter_html(
         payload.html_body, payload.css_styles, placeholders
     )
+    if pdf:
+        from ..template_rendering import preview_pdf_response
+        name = detail["candidate"].name if detail.get("candidate") else "offer"
+        return preview_pdf_response(rendered, f"offer-letter-{name}.pdf")
     return schemas.OfferLetterHtmlTemplatePreviewOut(rendered_html=rendered)
 
 
@@ -518,21 +531,105 @@ def activate_intern_offer_letter_template(
 
 @router.post("/intern-offer-letter-templates/preview", response_model=schemas.OfferLetterHtmlTemplatePreviewOut)
 def preview_intern_offer_letter_template(
-    payload: schemas.OfferLetterHtmlTemplatePreviewRequest,
+    payload: schemas.InternOfferLetterPreviewRequest,
+    pdf: bool = False,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(_require_recruitment_edit),
 ):
-    """Live Preview against a real, selected offer (never sample data)."""
+    """Live Preview against a real, selected intern (or offer) -- never sample data."""
     company = db.get(models.Company, current_user.company_id)
     error = offer_letter_html_renderer.validate_template_html(payload.html_body, payload.css_styles)
     if error:
         raise HTTPException(status_code=400, detail=error)
-    detail = crud.get_offer_detail(db, payload.offer_id, company.id)
-    if detail is None:
-        raise HTTPException(status_code=404, detail="Offer not found")
-    rendered = intern_offer_letter.render(
-        payload.html_body, payload.css_styles, intern_offer_letter.build_placeholders(db, detail, company))
+    if payload.employee_id is not None:
+        eligible = {e.id: e for e in intern_offer_letter.list_interns(db, company.id)}
+        employee = eligible.get(payload.employee_id)
+        if employee is None:
+            raise HTTPException(status_code=404, detail="Intern not found")
+        values = intern_offer_letter.build_employee_placeholders(db, employee, company)
+    elif payload.offer_id is not None:
+        detail = crud.get_offer_detail(db, payload.offer_id, company.id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Offer not found")
+        values = intern_offer_letter.build_placeholders(db, detail, company)
+    else:
+        raise HTTPException(status_code=422, detail="Select an intern to preview against.")
+    rendered = intern_offer_letter.render(payload.html_body, payload.css_styles, values)
+    if pdf:
+        from ..template_rendering import preview_pdf_response
+        return preview_pdf_response(rendered, f"intern-offer-letter-{values.get('intern_name') or 'intern'}.pdf")
     return schemas.OfferLetterHtmlTemplatePreviewOut(rendered_html=rendered)
+
+
+@router.get("/intern-offer-letter-templates/interns")
+def list_intern_offer_letter_interns(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(_require_recruitment_edit),
+):
+    """Active employees whose employment type is Intern (live -- new interns
+    show up immediately). Feeds the checkbox list on the template page."""
+    out = []
+    for e in intern_offer_letter.list_interns(db, current_user.company_id):
+        des = db.get(models.Designation, e.designation_id) if e.designation_id else None
+        out.append({
+            "id": str(e.id), "name": intern_offer_letter.employee_label(e), "employee_code": e.employee_code,
+            "email": e.work_email, "designation": des.name if des else None,
+            "joining_date": e.date_of_joining.isoformat() if e.date_of_joining else None,
+            "end_date": e.contract_end_date.isoformat() if e.contract_end_date else None,
+        })
+    return out
+
+
+@router.post("/intern-offer-letter-templates/generate")
+def generate_intern_offer_letters(
+    payload: schemas.InternOfferLettersGenerate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(_require_recruitment_edit),
+):
+    """Offer letters for the selected interns from the active Intern Offer
+    Letter template: one PDF, or a ZIP of PDFs for several. Only employees
+    of this company whose employment type is Intern are accepted."""
+    import io
+    import re
+    import zipfile
+
+    company = db.get(models.Company, current_user.company_id)
+    if payload.html_body:
+        error = offer_letter_html_renderer.validate_template_html(payload.html_body, payload.css_styles)
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+        html_body, css_styles = payload.html_body, payload.css_styles
+    else:
+        template = intern_offer_letter.get_active(db, company.id)
+        if template is None:
+            raise HTTPException(status_code=400, detail="No active Intern Offer Letter template -- activate one first.")
+        html_body, css_styles = template.html_body, template.css_styles
+    ids = list(dict.fromkeys(payload.employee_ids))
+    eligible = {e.id: e for e in intern_offer_letter.list_interns(db, company.id)}
+    missing = [i for i in ids if i not in eligible]
+    if missing:
+        raise HTTPException(status_code=422, detail="Only active employees with the Intern employment type can be selected.")
+    files: list[tuple[str, bytes]] = []
+    for i in ids:
+        e = eligible[i]
+        rendered = intern_offer_letter.render(
+            html_body, css_styles, intern_offer_letter.build_employee_placeholders(db, e, company))
+        safe = re.sub(r"[^A-Za-z0-9]+", "-", intern_offer_letter.employee_label(e)).strip("-") or "intern"
+        files.append((f"intern-offer-letter-{safe}-{e.employee_code or str(e.id)[:6]}.pdf",
+                      offer_letter_html_renderer.render_html_to_pdf(rendered)))
+    for e_id in ids:
+        crud.create_audit_log(db, company.id, current_user.id, "generate", "intern_offer_letter", e_id)
+    db.commit()
+    if len(files) == 1:
+        name, data = files[0]
+        return Response(content=data, media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, data in files:
+            z.writestr(name, data)
+    return Response(content=buf.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="intern-offer-letters.zip"'})
 
 
 def offer_letter_pdf(db: Session, company: models.Company, detail: dict) -> tuple[bytes, str]:

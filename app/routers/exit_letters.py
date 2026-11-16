@@ -369,6 +369,7 @@ def preview_exit_letter_template(
     letter_type: str = _TYPE,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_hr_documents),
+    pdf: bool = False,
 ):
     """Live Preview of the in-progress (unsaved) HTML/CSS against a real exit
     request's employee data -- never sample data."""
@@ -390,9 +391,11 @@ def preview_exit_letter_template(
                        ("authorized_signature", payload.signature_image_data_url)):
         if draft is not None:
             placeholders[key] = _draft_image(draft)
-    return schemas.OfferLetterHtmlTemplatePreviewOut(
-        rendered_html=renderer.render_exit_letter_html(payload.html_body, payload.css_styles, placeholders)
-    )
+    rendered = renderer.render_exit_letter_html(payload.html_body, payload.css_styles, placeholders)
+    if pdf:
+        from ..template_rendering import preview_pdf_response
+        return preview_pdf_response(rendered, f"{letter_type}-{placeholders.get('employee_id') or 'employee'}.pdf")
+    return schemas.OfferLetterHtmlTemplatePreviewOut(rendered_html=rendered)
 
 
 # ── offboarding workflow ───────────────────────────────────────────────────

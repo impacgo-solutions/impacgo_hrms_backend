@@ -140,6 +140,14 @@ _SAMPLE_CONTEXT: dict[str, dict[str, str]] = {
         "employee_name": "Asha Rao", "employee_id": "EMP-0042", "leave_type": "Earned Leave",
         "start_date": "12 Oct 2026", "end_date": "13 Oct 2026", "number_of_days": "2",
         "reason": "Family function", "status": "Pending", "hrms_url": _LINK,
+        # Real emails carry one-click Approve / Reject buttons (email_actions.py).
+        "action_buttons_html": (
+            '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 18px;"><tr>'
+            '<td style="padding-right:10px;"><a href="#" style="display:inline-block;background:#16a34a;color:#ffffff;'
+            'text-decoration:none;padding:10px 22px;border-radius:6px;font-weight:700;font-size:13px;">Approve</a></td>'
+            '<td><a href="#" style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;'
+            'padding:10px 22px;border-radius:6px;font-weight:700;font-size:13px;">Reject</a></td></tr></table>'
+        ),
     },
     "leave_approved": {
         "employee_name": "Asha Rao", "employee_id": "EMP-0042", "leave_type": "Earned Leave",
