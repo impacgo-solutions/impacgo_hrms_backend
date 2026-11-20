@@ -118,6 +118,16 @@ app = FastAPI(
 )
 
 
+@app.on_event("shutdown")
+async def _close_db_pool() -> None:
+    """Closes the pooled database connections when the API stops, so the
+    server (or PgBouncer) frees them at once instead of waiting for TCP
+    timeouts. Connections still checked out are closed when they return."""
+    from .database import engine
+
+    engine.dispose()
+
+
 @app.on_event("startup")
 async def _bind_ws_loop() -> None:
     """Lets ws_manager.manager.push (called synchronously from the
@@ -133,6 +143,14 @@ async def _start_reminders() -> None:
     from . import reminders
 
     reminders.start()
+
+
+@app.on_event("startup")
+async def _start_finance_link() -> None:
+    """Expense claims -> IMPACGO Finance (app/finance_link.py): the background sender (nothing runs unless FINANCE_URL, FINANCE_API_KEY and FINANCE_COMPANY_ID are set)."""
+    from . import finance_link
+
+    finance_link.start_sender()
 
 
 @app.on_event("startup")
@@ -381,6 +399,8 @@ app.include_router(work.router)
 app.include_router(worktrack_router.router)
 app.include_router(travel.router)
 app.include_router(travel_expense_config.router)
+from . import finance_link  # noqa: E402  (expense claims post to IMPACGO Finance; also registers the session hook that queues them)
+app.include_router(finance_link.router)
 app.include_router(audit.router)
 app.include_router(reports.router)
 app.include_router(settings_router.router)
