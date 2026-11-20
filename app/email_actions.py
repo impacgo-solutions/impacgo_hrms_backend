@@ -162,8 +162,16 @@ class ActionContext:
             self.error = ("This link is not valid or has expired. "
                           "Please open Impacgo HRMS to review this request.")
             return
-        slug = self.payload["s"]
         self.db = database.SessionLocal()
+        try:
+            self._load(self.payload["s"])
+        except BaseException:
+            # The caller's try/finally ctx.close() only starts once __init__
+            # returns, so a failure here must close the session itself.
+            self.close()
+            raise
+
+    def _load(self, slug: str) -> None:
         tenant = self.db.scalar(select(models.Tenant).where(models.Tenant.slug == slug,
                                                             models.Tenant.is_active.is_(True)))
         if tenant is None:
