@@ -7,24 +7,19 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
 
-def _pg_connect_options() -> str:
-    """Per-connection server-side safety timeouts (DB-03), sent as libpq
-    startup options so they cost no extra round trip. Each is
+def _pg_timeout_settings() -> list[tuple[str, int]]:
+    """Per-connection server-side safety timeouts (DB-03). Each is
     env-configurable via config.py (DB_STATEMENT_TIMEOUT_MS etc.); 0 turns
     that one off."""
-    opts = []
-    if settings.db_statement_timeout_ms > 0:
-        opts.append(f"-c statement_timeout={int(settings.db_statement_timeout_ms)}")
-    if settings.db_lock_timeout_ms > 0:
-        opts.append(f"-c lock_timeout={int(settings.db_lock_timeout_ms)}")
-    if settings.db_idle_in_transaction_timeout_ms > 0:
-        opts.append(
-            f"-c idle_in_transaction_session_timeout={int(settings.db_idle_in_transaction_timeout_ms)}"
-        )
-    return " ".join(opts)
+    pairs = [
+        ("statement_timeout", settings.db_statement_timeout_ms),
+        ("lock_timeout", settings.db_lock_timeout_ms),
+        ("idle_in_transaction_session_timeout", settings.db_idle_in_transaction_timeout_ms),
+    ]
+    return [(name, int(ms)) for name, ms in pairs if ms and int(ms) > 0]
 
 
-_connect_options = _pg_connect_options()
+_timeout_settings = _pg_timeout_settings()
 
 # PERF-04: the default QueuePool (5 + 10 overflow, 30 s timeout, no
 # recycle) was smaller than uvicorn's 40-thread pool, so moderate load
@@ -37,9 +32,27 @@ engine = create_engine(
     max_overflow=settings.db_max_overflow,
     pool_timeout=settings.db_pool_timeout,
     pool_recycle=settings.db_pool_recycle,
-    connect_args={"options": _connect_options} if _connect_options else {},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+# The timeouts are applied with SET right after each new DB connection is
+# opened, NOT as libpq startup `options`: PgBouncer rejects the `options`
+# startup parameter ("unsupported startup parameter: options"). Session-level
+# SET persists for the connection's lifetime, which is correct for direct
+# PostgreSQL and for PgBouncer in session mode. (In PgBouncer transaction mode
+# a session SET is not reliably kept -- set these on the role/database there.)
+@event.listens_for(engine, "connect")
+def _set_connection_timeouts(dbapi_connection, connection_record):
+    if not _timeout_settings:
+        return
+    cur = dbapi_connection.cursor()
+    try:
+        for name, ms in _timeout_settings:
+            cur.execute(f"SET {name} = {ms}")  # name from a fixed list, ms an int
+    finally:
+        cur.close()
+    dbapi_connection.commit()
 
 
 # SEC-08 / C15: tenant routing uses SET LOCAL (transaction-scoped, see
