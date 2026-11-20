@@ -35,16 +35,21 @@ class _Portal:
             raise HTTPException(status_code=404, detail="This link is not valid.")
         self.slug, self.token = slug, token
         self.db = database.SessionLocal()
-        tenant = self.db.scalar(select(models.Tenant).where(models.Tenant.slug == slug, models.Tenant.is_active.is_(True)))
-        if tenant is None:
+        # The route's try/finally portal.close() only starts once __init__
+        # returns, so any failure here (404 or DB error) closes the session itself.
+        try:
+            tenant = self.db.scalar(select(models.Tenant).where(models.Tenant.slug == slug, models.Tenant.is_active.is_(True)))
+            if tenant is None:
+                raise HTTPException(status_code=404, detail="This link is not valid.")
+            database.set_session_tenant_slug(self.db, slug)
+            database.ensure_tenant_search_path(self.db)
+            self.link = onb.resolve_portal_token(self.db, token)
+            self.ctx = None
+            if self.link is not None:
+                self.ctx = rw.system_ctx(self.db, self.link.company_id, "Candidate")
+        except BaseException:
             self.db.close()
-            raise HTTPException(status_code=404, detail="This link is not valid.")
-        database.set_session_tenant_slug(self.db, slug)
-        database.ensure_tenant_search_path(self.db)
-        self.link = onb.resolve_portal_token(self.db, token)
-        self.ctx = None
-        if self.link is not None:
-            self.ctx = rw.system_ctx(self.db, self.link.company_id, "Candidate")
+            raise
 
     def close(self):
         self.db.close()
