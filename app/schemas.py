@@ -357,6 +357,11 @@ class LoginRequest(BaseModel):
     remember_me: bool = False
 
 
+class SsoRequest(BaseModel):
+    """Portal single sign-on: the one-time code from the portal's launch link."""
+    code: str  # any length: an odd code is simply refused (401) by the one-time-code lookup, never a 422 that echoes it
+
+
 class EmployeeSummaryOut(BaseModel):
     id: uuid.UUID
     employee_code: str

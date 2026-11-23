@@ -63,7 +63,7 @@ def _rules() -> list[tuple[str, re.Pattern[str], _Rule]]:
         ("POST", re.compile(r"^/api/hr/documents/send-email$"), email),
         ("POST", re.compile(r"^/api/payroll/payslips/[^/]+/email$"), email),
         ("POST", re.compile(r"^/api/offers/[^/]+/email$"), email),
-        ("POST", re.compile(r"^/api/auth/login$"), auth),
+        ("POST", re.compile(r"^/api/auth/(login|sso)$"), auth),
         ("POST", re.compile(r"^/api/super-admin/login$"), auth),
         ("POST", re.compile(r"^/api/super-admin/change-password$"), sensitive),
         ("POST", re.compile(r"^/api/(users|hrms-admins)/[^/]+/reset-password$"), sensitive),
