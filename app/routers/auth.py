@@ -1,9 +1,11 @@
+import hashlib
 import logging
 import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .. import access_lifecycle, auth_state, crud, models, schemas, security
@@ -92,6 +94,19 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
         if lock_seconds:
             raise _locked_response(lock_seconds)
         raise HTTPException(status_code=401, detail=_INVALID_CREDENTIALS)
+    return _complete_sign_in(db, public_user, email_key, payload.remember_me)
+
+
+def _complete_sign_in(
+    db: Session, public_user, email_key: str, remember_me: bool
+) -> schemas.LoginResponse:
+    """Everything a sign-in does once the caller is proven to be
+    `public_user` -- shared by the password login and the portal SSO
+    exchange so neither can skip a rule the other enforces: password-reset
+    flag, deactivation, HRMS tenant / tenant status, employee access
+    status, core user + role, failed-attempt reset, last_login_at,
+    token_version, then the token and the LoginResponse. Raises
+    HTTPException for every refusal; commits on success."""
     # A flagged account (72-byte bcrypt hash) stays refused until an admin
     # resets it -- even for the 72-byte prefix, which its old hash matches.
     if auth_state.is_password_reset_required(db, public_user):
@@ -175,20 +190,63 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
         public_user_id=public_user.id,
         token_version=token_version,
         password_hash=public_user.password_hash,
-        remember=payload.remember_me,
+        remember=remember_me,
     )
 
     return schemas.LoginResponse(
         access_token=token,
         expires_at=security.decode_access_token(token).expires_at,
-        remember_me=payload.remember_me,
-        idle_timeout_minutes=0 if payload.remember_me else settings.session_idle_minutes,
+        remember_me=remember_me,
+        idle_timeout_minutes=0 if remember_me else settings.session_idle_minutes,
         role=primary_role.name,
         employee=employee,
         tenant_slug=tenant_slug,
         company_id=company_id,
         permissions=permissions,
     )
+
+
+_SSO_INVALID = "Invalid or expired sign-in link"
+
+
+@router.post("/sso", response_model=schemas.LoginResponse)
+def sso_login(payload: schemas.SsoRequest, db: Session = Depends(get_db)):
+    """Portal single sign-on (erp_portal SSO_CONTRACT.md): exchanges the
+    portal's one-time launch code for this app's normal login response.
+    Every failure -- unknown / used / expired / other-app code, a user or
+    tenant a password login would refuse -- is the same generic 401, and the
+    code is never logged."""
+    invalid = HTTPException(status_code=401, detail=_SSO_INVALID)
+    code_hash = hashlib.sha256(payload.code.encode("utf-8")).hexdigest()
+    try:
+        # One statement consumes the code (single use, 60 s, this app only);
+        # committed at once so a later refusal still leaves it spent.
+        row = db.execute(
+            text(
+                "UPDATE public.portal_sso_codes SET used_at = now() "
+                "WHERE code_hash = :h AND app = 'hrms' AND used_at IS NULL AND expires_at > now() "
+                "RETURNING user_id, tenant_slug"
+            ),
+            {"h": code_hash},
+        ).first()
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.warning("Portal SSO exchange failed (%s)", type(exc).__name__)
+        raise invalid
+    if row is None:
+        raise invalid
+    public_user = db.get(models.PublicUser, row.user_id)
+    if public_user is None or public_user.tenant_slug != row.tenant_slug:
+        raise invalid
+    email_key = public_user.email.strip().lower()
+    # An account locked by repeated failures stays locked for SSO too.
+    if auth_state.lockout_remaining_seconds(db, email_key, public_user) > 0:
+        raise invalid
+    try:
+        return _complete_sign_in(db, public_user, email_key, False)
+    except HTTPException:
+        raise invalid
 
 
 @router.post("/refresh")
