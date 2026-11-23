@@ -606,6 +606,8 @@ class BranchEmployeesOut(BaseModel):
 class EmployeeOut(BaseModel):
     id: uuid.UUID
     employee_code: str
+    # IMPACGO Finance: the employee's payable GL account (what the company owes them; credited by an approved expense claim)
+    payable_account_id: uuid.UUID | None = None
     first_name: str
     last_name: str | None
     work_email: str | None
@@ -3035,6 +3037,9 @@ class AssetInventoryItemOut(BaseModel):
     description: str | None = None
     custom_fields: dict[str, str] = {}
     images: list["AssetImageOut"] = []
+    # IMPACGO Finance: the linked fixed asset (Finance keeps its books) and Finance's last refusal of the holder HRMS reported.
+    finance_asset_id: uuid.UUID | None = None
+    finance_error: str | None = None
 
 
 class AssetImageOut(BaseModel):
@@ -3083,6 +3088,8 @@ class AssetInventoryItemCreate(BaseModel):
     value: str | None = None
     purchased: str | None = None
     custom_fields: dict[str, object] | None = None
+    # IMPACGO Finance fixed asset this is (null = not linked / unlink).
+    finance_asset_id: uuid.UUID | None = None
 
     _category = field_validator("category")(classmethod(lambda cls, v: _asset_category_key(v)))
 
@@ -3100,6 +3107,8 @@ class AssetInventoryItemUpdate(BaseModel):
     value: str | None = None
     purchased: str | None = None
     custom_fields: dict[str, object] | None = None
+    # IMPACGO Finance fixed asset this is (null = not linked / unlink).
+    finance_asset_id: uuid.UUID | None = None
 
     _category = field_validator("category")(classmethod(lambda cls, v: _asset_category_key(v)))
 
@@ -4340,6 +4349,14 @@ class ExpenseAdvanceOut(BaseModel):
 class ExpenseReportOut(BaseModel):
     id: uuid.UUID
     employee_id: uuid.UUID
+    # IMPACGO Finance (app/finance_link.py): DRAFT while pending, POSTED once approved; the voucher numbers; why Finance refused it
+    finance_status: str | None = None
+    finance_voucher_no: str | None = None
+    finance_payment_voucher_no: str | None = None
+    finance_error: str | None = None
+    finance_exchange_rate: float | None = None
+    finance_base_currency: str | None = None
+    finance_base_amount: float | None = None
     reference: str | None
     # ISO 4217 code of every amount below (items, taxes, totals) -- never converted.
     currency_code: str = "INR"
@@ -4413,6 +4430,8 @@ class ExpenseClaimTypeIn(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     description: str | None = Field(default=None, max_length=255)
     is_active: bool = True
+    # IMPACGO Finance: the expense GL account this category's claim rows are debited to (several categories may share one)
+    gl_account_id: uuid.UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -4432,6 +4451,7 @@ class ExpenseClaimTypeUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=40)
     description: str | None = Field(default=None, max_length=255)
     is_active: bool | None = None
+    gl_account_id: uuid.UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -4455,6 +4475,7 @@ class ExpenseClaimTypeOut(BaseModel):
     name: str
     description: str | None = None
     is_active: bool
+    gl_account_id: uuid.UUID | None = None
     usage_count: int = 0
     created_at: datetime.datetime | None = None
 

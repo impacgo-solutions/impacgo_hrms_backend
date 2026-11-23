@@ -83,7 +83,7 @@ def claim_type_usage(db: Session, company_id: uuid.UUID, type_row: models.Expens
 
 def claim_type_out(db: Session, company_id: uuid.UUID, t: models.ExpenseClaimType) -> schemas.ExpenseClaimTypeOut:
     return schemas.ExpenseClaimTypeOut(
-        id=t.id, name=t.name, description=t.description, is_active=t.is_active,
+        id=t.id, name=t.name, description=t.description, is_active=t.is_active, gl_account_id=t.gl_account_id,
         usage_count=claim_type_usage(db, company_id, t), created_at=t.created_at,
     )
 
@@ -656,6 +656,11 @@ def expense_report_out(
             purpose=adv.purpose if adv else None, posting_date=adv.posting_date if adv else None,
             advance_amount=float(adv.advance_amount) if adv else None))
     return schemas.ExpenseReportOut(
+        finance_status=claim.finance_status, finance_voucher_no=claim.finance_voucher_no, finance_payment_voucher_no=claim.finance_payment_voucher_no,
+        finance_error=claim.finance_error,
+        finance_exchange_rate=float(claim.finance_exchange_rate) if claim.finance_exchange_rate is not None else None,
+        finance_base_currency=claim.finance_base_currency,
+        finance_base_amount=float(claim.finance_base_amount) if claim.finance_base_amount is not None else None,
         id=claim.id, employee_id=claim.employee_id, reference=claim.purpose, claim_date=claim.claim_date,
         currency_code=claim.currency_code or "INR", status=claim.status,
         items=[schemas.ExpenseLineItemOut(

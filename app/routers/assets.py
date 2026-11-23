@@ -112,6 +112,8 @@ def _to_out(asset, db, custom: dict | None = None, images: dict | None = None) -
         description=asset.description,
         custom_fields=(custom or {}).get(asset.id, {}),
         images=(images if images is not None else _load_images(db, [asset.id])).get(asset.id, []),
+        finance_asset_id=asset.finance_asset_id,
+        finance_error=asset.finance_error,
     )
 
 
@@ -245,6 +247,9 @@ def create_asset_inventory_item(
             description=_text(payload.description, multiline=True),
         )
         form_config.save_custom_values(db, company.id, "asset", asset.id, cleaned)
+        if payload.finance_asset_id is not None:
+            _check_finance_link(db, company.id, payload.finance_asset_id, asset.id)
+            asset.finance_asset_id = payload.finance_asset_id
         crud.create_audit_log(db, company.id, current_user.id, "create", "asset_inventory_item", asset.id)
         db.commit()
     except ValueError as exc:
@@ -252,6 +257,15 @@ def create_asset_inventory_item(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     db.refresh(asset)
     return _to_out(asset, db, form_config.load_custom_values(db, company.id, "asset", [asset.id]))
+
+
+def _check_finance_link(db, company_id, finance_asset_id, asset_id) -> None:
+    """One HRMS asset per Finance fixed asset."""
+    other = db.scalar(select(models.AssetInventoryItem.asset_tag).where(models.AssetInventoryItem.company_id == company_id,
+                                                                        models.AssetInventoryItem.finance_asset_id == finance_asset_id,
+                                                                        models.AssetInventoryItem.id != asset_id))
+    if other is not None:
+        raise HTTPException(status_code=409, detail=f"That Finance fixed asset is already linked to asset {other}.")
 
 
 def _text(raw: str | None, *, multiline: bool = False) -> str | None:
@@ -335,6 +349,10 @@ def update_asset_inventory_item(
         put("purchase_value", _parse_value(payload.value))
     if "purchased" in sent:
         put("purchased_on", _parse_purchased(db, company.id, payload.purchased))
+    if "finance_asset_id" in sent:
+        if payload.finance_asset_id is not None:
+            _check_finance_link(db, company.id, payload.finance_asset_id, asset.id)
+        put("finance_asset_id", payload.finance_asset_id)
     if "custom_fields" in sent and payload.custom_fields is not None:
         cleaned = form_config.validate_custom_values(db, company.id, "asset", payload.custom_fields,
                                                      partial=True, enforce_required=False)

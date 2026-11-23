@@ -253,6 +253,8 @@ class Employee(Base):
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("core_companies.id")
     )
+    # Finance: the GL account (Finance's account id) that holds what the company owes this employee; an approved expense claim credits it
+    payable_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     branch_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("core_branches.id"), nullable=True
     )
@@ -1346,6 +1348,18 @@ class ExpenseClaim(Base):
     total_taxes: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
     advance_amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
     submitted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Finance (app/finance_link.py): the claim's journal -- a DRAFT while pending, POSTED once approved -- and the payment's journal
+    finance_tx_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    finance_status: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    finance_voucher_no: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    finance_payment_tx_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    finance_payment_voucher_no: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    finance_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # A claim in another currency than Finance's base currency: the rate IMPACGO Finance gave for the posting date (1 claim currency = rate base), the base
+    # currency, and the claim's total in it. HRMS keeps no rates of its own: Finance's Currency & FX is the only source.
+    finance_exchange_rate: Mapped[float | None] = mapped_column(Numeric(18, 8), nullable=True)
+    finance_base_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    finance_base_amount: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
 
     employee: Mapped["Employee"] = relationship(foreign_keys=[employee_id])
     lines: Mapped[list["ExpenseClaimLine"]] = relationship(
@@ -1389,6 +1403,8 @@ class ExpenseClaimType(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("core_companies.id"))
     name: Mapped[str] = mapped_column(String(80))
+    # Finance: the expense GL account (Finance's account id) this category's claim rows are debited to; several categories may share one
+    gl_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -2212,6 +2228,11 @@ class AssetInventoryItem(Base):
     status: Mapped[str] = mapped_column(String(15), default="available")
     purchase_value: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     purchased_on: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    # IMPACGO Finance (db/2026_11_17_finance_expense_claims.sql): the fixed asset in Finance's register this is (Finance keeps the books -- cost,
+    # depreciation; HRMS keeps who holds it), the Finance asset whose holder HRMS last reported, and Finance's last refusal.
+    finance_asset_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    finance_custodian_asset_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    finance_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class AssetImage(Base):
@@ -4854,3 +4875,42 @@ class FormFieldSetting(Base):
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class FinanceLinkSettings(Base):
+    """Administration > Integrations > IMPACGO Finance: how this company reaches its Finance (db/2026_11_17_finance_expense_claims.sql). The key is the HRMS
+    connector key created in that Finance, stored encrypted (TENANT_EMAIL_ENCRYPTION_KEY) and never returned; key_hint is its last 4 characters."""
+
+    __tablename__ = "hcm_finance_link_settings"
+
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    finance_url: Mapped[str] = mapped_column(String(300))
+    finance_tenant: Mapped[str | None] = mapped_column(String(63), nullable=True)
+    api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    key_hint: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    journal_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    bank_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    advance_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    claim_tax_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    business_unit_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    finance_company_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    finance_base_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    verified_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    updated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class FinanceOutbox(Base):
+    """A document whose Finance journal must be brought in line with it (app/finance_link.py). Queued in the same transaction as the change; the sender works it."""
+    __tablename__ = "hcm_finance_outbox"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    doctype: Mapped[str] = mapped_column(String(30))
+    doc_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    status: Mapped[str] = mapped_column(String(12), default="pending")
+    attempts: Mapped[int] = mapped_column(default=0)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.timezone.utc))

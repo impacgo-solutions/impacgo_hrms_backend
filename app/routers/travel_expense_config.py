@@ -112,7 +112,7 @@ def create_expense_claim_type(
         raise HTTPException(status_code=409, detail=f"Expense Category '{payload.name}' already exists")
     row = models.ExpenseClaimType(
         id=uuid.uuid4(), company_id=current_user.company_id, name=payload.name, description=payload.description,
-        is_active=payload.is_active, created_by=current_user.id)
+        is_active=payload.is_active, gl_account_id=payload.gl_account_id, created_by=current_user.id)
     db.add(row)
     db.flush()
     crud.create_audit_log(db, current_user.company_id, current_user.id, "create", "expense_claim_type", row.id)
@@ -159,9 +159,11 @@ def update_expense_claim_type(
                 .where(models.Employee.company_id == company_id,
                        func.lower(models.TravelCostingRow.expense_type) == old.lower())):
             c.expense_type = changes["name"]
-    for k in ("name", "description", "is_active"):
+    for k in ("name", "description", "is_active", "gl_account_id"):
         if k in changes:
             setattr(row, k, changes[k])
+    if "gl_account_id" in changes:  # the audit log stores JSON
+        changes["gl_account_id"] = str(changes["gl_account_id"]) if changes["gl_account_id"] else None
     row.updated_at = datetime.datetime.now(datetime.timezone.utc)
     crud.create_audit_log(db, current_user.company_id, current_user.id, "update", "expense_claim_type", row.id, changes=changes)
     db.commit()
