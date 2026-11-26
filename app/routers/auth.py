@@ -236,6 +236,16 @@ def sso_login(payload: schemas.SsoRequest, db: Session = Depends(get_db)):
         raise invalid
     if row is None:
         raise invalid
+    # The shared portal/app access rule (erp_portal migration 004): account, organisation, module, per-user visibility.
+    # Fails closed: an error (e.g. the function is missing) refuses the sign-in.
+    try:
+        allowed = db.execute(text("SELECT allowed FROM public.portal_app_access(:u, 'hrms')"), {"u": row.user_id}).scalar()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.warning("Portal SSO access check failed (%s)", type(exc).__name__)
+        allowed = False
+    if not allowed:
+        raise invalid
     public_user = db.get(models.PublicUser, row.user_id)
     if public_user is None or public_user.tenant_slug != row.tenant_slug:
         raise invalid

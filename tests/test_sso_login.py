@@ -35,6 +35,8 @@ class SsoLoginTests(_Base):
         auth_state._memory_failures.clear()
         if self.db.execute(text("SELECT to_regclass('public.portal_sso_codes')")).scalar() is None:
             self.skipTest("public.portal_sso_codes is not installed")
+        if self.db.execute(text("SELECT to_regproc('public.portal_app_access')")).scalar() is None:
+            self.skipTest("public.portal_app_access (erp_portal migration 004) is not installed")
         self.owner = self._owner()
         self.email = self._set_password(self.owner)
         self.pub = self._public(self.owner)
