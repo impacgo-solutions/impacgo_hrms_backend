@@ -1,0 +1,191 @@
+"""Standard (ISO 4217) currencies a project budget can be entered in -- the
+Create / Edit Project "Currency" field. A budget is stored as its amount plus
+this three-letter code (pm_project_budgets.currency_code); nothing is ever
+converted between currencies. The frontend keeps the same list in
+lib/core/utils/currencies.dart."""
+
+from __future__ import annotations
+
+# code -> (name, symbol)
+CURRENCIES: dict[str, tuple[str, str]] = {
+    "INR": ("Indian Rupee", "₹"),
+    "USD": ("US Dollar", "$"),
+    "EUR": ("Euro", "€"),
+    "GBP": ("British Pound", "£"),
+    "AED": ("UAE Dirham", "AED"),
+    "SAR": ("Saudi Riyal", "SAR"),
+    "QAR": ("Qatari Riyal", "QAR"),
+    "KWD": ("Kuwaiti Dinar", "KWD"),
+    "OMR": ("Omani Rial", "OMR"),
+    "BHD": ("Bahraini Dinar", "BHD"),
+    "SGD": ("Singapore Dollar", "S$"),
+    "MYR": ("Malaysian Ringgit", "RM"),
+    "THB": ("Thai Baht", "฿"),
+    "IDR": ("Indonesian Rupiah", "Rp"),
+    "PHP": ("Philippine Peso", "₱"),
+    "VND": ("Vietnamese Dong", "₫"),
+    "JPY": ("Japanese Yen", "¥"),
+    "CNY": ("Chinese Yuan", "CN¥"),
+    "HKD": ("Hong Kong Dollar", "HK$"),
+    "KRW": ("South Korean Won", "₩"),
+    "AUD": ("Australian Dollar", "A$"),
+    "NZD": ("New Zealand Dollar", "NZ$"),
+    "CAD": ("Canadian Dollar", "C$"),
+    "CHF": ("Swiss Franc", "CHF"),
+    "SEK": ("Swedish Krona", "kr"),
+    "NOK": ("Norwegian Krone", "kr"),
+    "DKK": ("Danish Krone", "kr"),
+    "ZAR": ("South African Rand", "R"),
+    "BRL": ("Brazilian Real", "R$"),
+    "MXN": ("Mexican Peso", "MX$"),
+    "LKR": ("Sri Lankan Rupee", "Rs"),
+    "NPR": ("Nepalese Rupee", "Rs"),
+    "BDT": ("Bangladeshi Taka", "৳"),
+    "PKR": ("Pakistani Rupee", "Rs"),
+    "AFN": ("Afghan Afghani", "؋"),
+    "ALL": ("Albanian Lek", "L"),
+    "AMD": ("Armenian Dram", "֏"),
+    "ANG": ("Netherlands Antillean Guilder", "ƒ"),
+    "AOA": ("Angolan Kwanza", "Kz"),
+    "ARS": ("Argentine Peso", "AR$"),
+    "AWG": ("Aruban Florin", "ƒ"),
+    "AZN": ("Azerbaijani Manat", "₼"),
+    "BAM": ("Bosnia-Herzegovina Convertible Mark", "KM"),
+    "BBD": ("Barbadian Dollar", "Bds$"),
+    "BGN": ("Bulgarian Lev", "лв"),
+    "BIF": ("Burundian Franc", "FBu"),
+    "BMD": ("Bermudian Dollar", "BD$"),
+    "BND": ("Brunei Dollar", "B$"),
+    "BOB": ("Bolivian Boliviano", "Bs."),
+    "BSD": ("Bahamian Dollar", "B$"),
+    "BTN": ("Bhutanese Ngultrum", "Nu."),
+    "BWP": ("Botswana Pula", "P"),
+    "BYN": ("Belarusian Ruble", "Br"),
+    "BZD": ("Belize Dollar", "BZ$"),
+    "CDF": ("Congolese Franc", "FC"),
+    "CLP": ("Chilean Peso", "CL$"),
+    "COP": ("Colombian Peso", "COL$"),
+    "CRC": ("Costa Rican Colón", "₡"),
+    "CUP": ("Cuban Peso", "CUP"),
+    "CVE": ("Cape Verdean Escudo", "CVE"),
+    "CZK": ("Czech Koruna", "Kč"),
+    "DJF": ("Djiboutian Franc", "Fdj"),
+    "DOP": ("Dominican Peso", "RD$"),
+    "DZD": ("Algerian Dinar", "DA"),
+    "EGP": ("Egyptian Pound", "E£"),
+    "ERN": ("Eritrean Nakfa", "Nfk"),
+    "ETB": ("Ethiopian Birr", "Br"),
+    "FJD": ("Fijian Dollar", "FJ$"),
+    "FKP": ("Falkland Islands Pound", "FK£"),
+    "GEL": ("Georgian Lari", "₾"),
+    "GHS": ("Ghanaian Cedi", "GH₵"),
+    "GIP": ("Gibraltar Pound", "£"),
+    "GMD": ("Gambian Dalasi", "D"),
+    "GNF": ("Guinean Franc", "FG"),
+    "GTQ": ("Guatemalan Quetzal", "Q"),
+    "GYD": ("Guyanese Dollar", "G$"),
+    "HNL": ("Honduran Lempira", "L"),
+    "HTG": ("Haitian Gourde", "G"),
+    "HUF": ("Hungarian Forint", "Ft"),
+    "ILS": ("Israeli New Shekel", "₪"),
+    "IQD": ("Iraqi Dinar", "IQD"),
+    "IRR": ("Iranian Rial", "IRR"),
+    "ISK": ("Icelandic Króna", "kr"),
+    "JMD": ("Jamaican Dollar", "J$"),
+    "JOD": ("Jordanian Dinar", "JOD"),
+    "KES": ("Kenyan Shilling", "KSh"),
+    "KGS": ("Kyrgyzstani Som", "KGS"),
+    "KHR": ("Cambodian Riel", "៛"),
+    "KMF": ("Comorian Franc", "CF"),
+    "KPW": ("North Korean Won", "KPW"),
+    "KYD": ("Cayman Islands Dollar", "CI$"),
+    "KZT": ("Kazakhstani Tenge", "₸"),
+    "LAK": ("Lao Kip", "₭"),
+    "LBP": ("Lebanese Pound", "L£"),
+    "LRD": ("Liberian Dollar", "L$"),
+    "LSL": ("Lesotho Loti", "L"),
+    "LYD": ("Libyan Dinar", "LD"),
+    "MAD": ("Moroccan Dirham", "MAD"),
+    "MDL": ("Moldovan Leu", "L"),
+    "MGA": ("Malagasy Ariary", "Ar"),
+    "MKD": ("Macedonian Denar", "ден"),
+    "MMK": ("Myanmar Kyat", "K"),
+    "MNT": ("Mongolian Tögrög", "₮"),
+    "MOP": ("Macanese Pataca", "MOP$"),
+    "MRU": ("Mauritanian Ouguiya", "UM"),
+    "MUR": ("Mauritian Rupee", "Rs"),
+    "MVR": ("Maldivian Rufiyaa", "Rf"),
+    "MWK": ("Malawian Kwacha", "MK"),
+    "MZN": ("Mozambican Metical", "MT"),
+    "NAD": ("Namibian Dollar", "N$"),
+    "NGN": ("Nigerian Naira", "₦"),
+    "NIO": ("Nicaraguan Córdoba", "C$"),
+    "PAB": ("Panamanian Balboa", "B/."),
+    "PEN": ("Peruvian Sol", "S/"),
+    "PGK": ("Papua New Guinean Kina", "K"),
+    "PLN": ("Polish Złoty", "zł"),
+    "PYG": ("Paraguayan Guaraní", "₲"),
+    "RON": ("Romanian Leu", "lei"),
+    "RSD": ("Serbian Dinar", "din."),
+    "RUB": ("Russian Ruble", "₽"),
+    "RWF": ("Rwandan Franc", "RF"),
+    "SBD": ("Solomon Islands Dollar", "SI$"),
+    "SCR": ("Seychellois Rupee", "SCR"),
+    "SDG": ("Sudanese Pound", "SDG"),
+    "SHP": ("Saint Helena Pound", "£"),
+    "SLE": ("Sierra Leonean Leone", "Le"),
+    "SOS": ("Somali Shilling", "Sh"),
+    "SRD": ("Surinamese Dollar", "Sr$"),
+    "SSP": ("South Sudanese Pound", "SSP"),
+    "STN": ("São Tomé and Príncipe Dobra", "Db"),
+    "SYP": ("Syrian Pound", "£S"),
+    "SZL": ("Swazi Lilangeni", "E"),
+    "TJS": ("Tajikistani Somoni", "SM"),
+    "TMT": ("Turkmenistani Manat", "m"),
+    "TND": ("Tunisian Dinar", "DT"),
+    "TOP": ("Tongan Paʻanga", "T$"),
+    "TRY": ("Turkish Lira", "₺"),
+    "TTD": ("Trinidad and Tobago Dollar", "TT$"),
+    "TWD": ("New Taiwan Dollar", "NT$"),
+    "TZS": ("Tanzanian Shilling", "TSh"),
+    "UAH": ("Ukrainian Hryvnia", "₴"),
+    "UGX": ("Ugandan Shilling", "USh"),
+    "UYU": ("Uruguayan Peso", "$U"),
+    "UZS": ("Uzbekistani Som", "UZS"),
+    "VES": ("Venezuelan Bolívar", "Bs.S"),
+    "VUV": ("Vanuatu Vatu", "VT"),
+    "WST": ("Samoan Tālā", "WS$"),
+    "XAF": ("Central African CFA Franc", "FCFA"),
+    "XCD": ("East Caribbean Dollar", "EC$"),
+    "XOF": ("West African CFA Franc", "CFA"),
+    "XPF": ("CFP Franc", "₣"),
+    "YER": ("Yemeni Rial", "YER"),
+    "ZMW": ("Zambian Kwacha", "ZK"),
+    "ZWL": ("Zimbabwean Dollar", "Z$"),
+}
+
+
+def normalize_code(code: str | None) -> str | None:
+    """'usd ' -> 'USD'; None / blank -> None; ValueError for an unknown code."""
+    if code is None or not str(code).strip():
+        return None
+    c = str(code).strip().upper()
+    if c not in CURRENCIES:
+        raise ValueError(f"'{code}' is not a supported currency.")
+    return c
+
+
+def symbol(code: str | None) -> str:
+    return CURRENCIES.get((code or "").upper(), ("", code or ""))[1]
+
+
+def format_amount(amount: float | None, code: str | None) -> str:
+    """'$12,500' / '€9,800' / 'AED 4,000'; '—' with no amount. With no
+    currency recorded the plain number is shown (no currency is assumed)."""
+    if amount is None:
+        return "—"
+    number = f"{amount:,.2f}" if amount % 1 else f"{amount:,.0f}"
+    if not code:
+        return number
+    sym = symbol(code)
+    return f"{sym} {number}" if sym.isalpha() else f"{sym}{number}"
